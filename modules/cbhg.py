@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from layers.conv1d import Conv1dBankWithMaxPool, Conv1dProjection
-from layers.highway import HighwayNet
+from modules.conv1d import Conv1dBankWithMaxPool, Conv1dProjection
+from modules.highway import HighwayNet
 
 class CBHG(nn.Module):
 
