@@ -9,9 +9,9 @@ class CBHG(nn.Module):
     def __init__(self, bank_k, bank_ck, proj_dims):
         super(CBHG, self).__init__()
 
-        self.__bank_k = bank_k
-        self.__bank_ck = bank_ck
-        self.__proj_dims = proj_dims
+        self._bank_k = bank_k
+        self._bank_ck = bank_ck
+        self._proj_dims = proj_dims
 
         self.convbank = Conv1dBankWithMaxPool(self.bank_k, self.bank_ck)
         self.convproj = Conv1dProjection()
@@ -19,15 +19,15 @@ class CBHG(nn.Module):
 
     @property
     def bank_k(self):
-        return self.__bank_k
+        return self._bank_k
 
     @property
     def bank_ck(self):
-        return self.__bank_ck
+        return self._bank_ck
 
     @property
     def proj_dims(self):
-        return self.__proj_dims
+        return self._proj_dims
 
     def forward(self, x):
         x = torch.transpose(x, 1, 2)

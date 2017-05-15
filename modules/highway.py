@@ -6,8 +6,8 @@ from torch.nn.parameter import Parameter
 class SeqLinear(nn.Module):
 
     def __init__(self, in_features, out_features):
-        self.__in_features
-        self.__out_features
+        self._in_features = in_features
+        self._out_features = out_features
         self.weight = Parameter(
             torch.Tensor(out_features, in_features))
         self.bias = Parameter(
@@ -16,11 +16,11 @@ class SeqLinear(nn.Module):
 
     @property
     def in_features(self):
-        return self.__in_features
+        return self._in_features
 
     @property
     def out_features(self):
-        return self.__out_features
+        return self._out_features
 
     def _reset_parameters(self):
         stdv = 1. / math.sqrt(self.weight.size(1))
@@ -40,16 +40,16 @@ class HighwayNet(nn.Module):
 
     def __init__(self, num_layers, gate_fc_bias=-1):
         super(HighwayNet, self).__init__()
-        self.__num_layers = num_layers
-        self.__gate_fc_bias = gate_fc_bias
+        self._num_layers = num_layers
+        self._gate_fc_bias = gate_fc_bias
 
     @property
     def num_layers(self):
-        return self.__num_layers
+        return self._num_layers
 
     @property
     def gate_fc_bias(self):
-        return self.__gate_fc_bias
+        return self._gate_fc_bias
 
     def _single_layer(self, x):
         in_features = x.size()[1]

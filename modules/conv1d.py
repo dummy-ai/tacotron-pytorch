@@ -20,21 +20,21 @@ class Conv1dBankWithMaxPool(nn.Module):
             ck: An int
         """
 
-        self.__k = k
-        self.__ck = ck
-        self.__activation = activation
+        self._k = k
+        self._ck = ck
+        self._activation = activation
 
     @property
     def k(self):
-        return self.__k
+        return self._k
 
     @property
     def ck(self):
-        return self.__ck
+        return self._ck
 
     @property
     def activation(self):
-        return self.__activation
+        return self._activation
 
     def forward(self, x):
         """
@@ -74,21 +74,21 @@ class Conv1dProjection(nn.Module):
         Args:
             kernel_size: An int
         """
-        self.__proj_dims = proj_dims
-        self.__kernel_size = kernel_size
-        self.__activation = activation
+        self._proj_dims = proj_dims
+        self._kernel_size = kernel_size
+        self._activation = activation
 
     @property
     def proj_dims(self):
-        return self.__proj_dims
+        return self._proj_dims
 
     @property
     def kernel_size(self):
-        return self.__kernel_size
+        return self._kernel_size
 
     @property
     def activation(self):
-        return self.__activation
+        return self._activation
 
     def forward(self, x):
         in_channels = x.size()[1]
