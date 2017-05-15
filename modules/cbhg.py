@@ -14,7 +14,7 @@ class CBHG(nn.Module):
         self._proj_dims = proj_dims
 
         self.convbank = Conv1dBankWithMaxPool(self.bank_k, self.bank_ck)
-        self.convproj = Conv1dProjection()
+        self.convproj = Conv1dProjection(proj_dims)
         self.highway = HighwayNet(4)
 
     @property
