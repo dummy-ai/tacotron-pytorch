@@ -20,10 +20,11 @@ def test_highwaynet():
     inp = Variable(torch.ones(batch_size, in_channels, time_steps))
 
     num_layers = 4
-    highway = HighwayNet(4)
+    num_units = 128
+    highway = HighwayNet(4, 128)
 
     out = highway(inp)
-    assert out.size() == (batch_size, in_channels, time_steps)
+    assert out.size() == (batch_size, num_units, time_steps)
 
 
 
