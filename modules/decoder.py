@@ -3,10 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 from torch.nn import init
-
-def _wx(w, x):
-    return torch.bmm(w.unsqueeze(0).expand(
-        x.size()[0], w.size()[0], w.size()[1]), x)
+from modules.commons import _wx
 
 class AttnDecoder(nn.Module):
 

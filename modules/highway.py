@@ -3,42 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.parameter import Parameter
 import math
-
-class SeqLinear(nn.Module):
-    """A wrapper around nn.Linear to handle 3D tensor"""
-
-    def __init__(self, in_features, out_features):
-        super(SeqLinear, self).__init__()
-        self._in_features = in_features
-        self._out_features = out_features
-        self.linear = nn.Linear(in_features, out_features)
-
-    @property
-    def in_features(self):
-        return self._in_features
-
-    @property
-    def out_features(self):
-        return self._out_features
-
-    def forward(self, x):
-        """
-        Args:
-            x: A Tensor of size (batch_size, in_features, time_steps)
-
-        Returns:
-            A Tensor of size (batch_size, out_features, time_steps)
-        """
-        batch_size = x.size()[0]
-        x = x.transpose(1, 2).contiguous().view(-1, self.in_features)
-
-        # out has size (batch_size, time_steps, out_features)
-        out = self.linear(x).view(batch_size, -1, self.out_features)
-
-        # switch feature and time dimension
-        return out.contiguous().transpose(1, 2)
-
-
+from modules.commons import SeqLinear
 
 class HighwayNet(nn.Module):
 
