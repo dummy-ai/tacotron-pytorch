@@ -10,7 +10,13 @@ class CBHG(nn.Module):
     def __init__(self, bank_k, bank_ck, proj_dims, 
         highway_layers, highway_units, gru_units, gru_layers=1):
         super(CBHG, self).__init__()
-
+        """
+        Args:
+            bank_k, bank_ck: Two integers for Conv1D Bank
+                bank_k th set contains bank_ck filters of width k
+            proj_dims: A pair of integers, specifying the
+                projection dimensions in Conv1D projection layer 
+        """
         self._bank_k = bank_k
         self._bank_ck = bank_ck
         self._proj_dims = proj_dims
@@ -71,7 +77,7 @@ class CBHG(nn.Module):
         """
         x = torch.transpose(x, 1, 2).contiguous()
         bank_out = self.convbank(x)
-        proj_out = self.convproj(x)
+        proj_out = self.convproj(bank_out)
         res_out = x + proj_out
         highway_out = self.highway(res_out)
 
