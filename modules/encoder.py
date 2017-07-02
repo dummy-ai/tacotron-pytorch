@@ -18,10 +18,10 @@ class Encoder(nn.Module):
 	def forward(self, x):
 		"""
 		Args:
-			x: A Tensor of size (batch_size, max_length)
+			x: A Tensor of size (batch_size, time_steps)
 
 		Returns:
-			A Tensor of size (batch_size, max_length, 2 * gru_units)
+			A Tensor of size (batch_size, time_steps, 2 * gru_units)
 		"""
 		embedded = self.embedding(x)
 		return self.cbhg(self.prenet(embedded))
