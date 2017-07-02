@@ -1,6 +1,9 @@
+import os
+import json
 import collections
 import numpy as np
 from modules.melscale import melscale
+from modules.path import root_path
 
 # create Datasets type
 Datasets = collections.namedtuple('Datasets', ['train', 'validation', 'test'])
@@ -80,6 +83,14 @@ class DataSet:
         return self._audio_files
 
     @property
+    def max_text_length(self):
+        return self._max_text_length 
+
+    @property
+    def max_audio_length(self):
+        return self._max_audio_length 
+
+    @property
     def epochs_completed(self):
         return self._epochs_completed
 
@@ -123,19 +134,19 @@ class DataSet:
         end = self._index_in_epoch
         return self._spectros[start:end], self._indexed_texts[start:end]
 
-def main():
-    import json
-    import os
-    from modules.path import root_path
-    data_path = os.path.join(root_path, 
+def tiny_words(max_text_length=20, max_audio_length=30):
+    data_path = os.path.join(root_path,
         'data/tiny-words-v0/')
     meta_list = json.load(
         open(os.path.join(data_path, 'meta.json'), 'r'))
     texts = [x['text'] for x in meta_list]
     audios = [os.path.join(data_path, x['audio']) for x in meta_list]
-    ds = DataSet(texts, audios,
-        max_text_length=20, max_audio_length=30)
+    return DataSet(texts, audios,
+        max_text_length=max_text_length, max_audio_length=max_audio_length)
+
+def main():
     BATCH_SIZE = 32
+    ds = tiny_words()
     print(ds.next_batch(BATCH_SIZE))
 
 if __name__ == "__main__":
