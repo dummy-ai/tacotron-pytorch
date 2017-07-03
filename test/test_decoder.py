@@ -9,7 +9,7 @@ def test_decoder():
     num_frames = 3
     max_text_length = 30
 
-    decoder = AttnDecoder()
+    decoder = AttnDecoder(max_text_length)
     attn_gru_hidden, decoder_gru_hiddens = decoder.init_hiddens(batch_size)
 
     input = Variable(torch.randn(batch_size, frame_size)) 
