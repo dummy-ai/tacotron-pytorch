@@ -80,50 +80,52 @@ class AttnDecoder(nn.Module):
             a: Attention weights, a Tensor of size (batch_size, max_text_length)
         """
         batch_size = input.size()[0] 
-        input = self.prenet(
+        pre_out  = self.prenet(
             input.view(batch_size, 1, self.frame_size)
         ).squeeze()
 
         # run attn gru for one step
         # attn_output has size (batch_size, self.attn_gru_hidden_size)
-        attn_gru_hidden = self.attn_gru(input, attn_gru_hidden)
-        attn_output = F.relu(attn_gru_hidden)
+        new_attn_gru_hidden = self.attn_gru(pre_out, attn_gru_hidden)
+        attn_output = F.relu(new_attn_gru_hidden)
 
         # please refer to the following paper for attention equations
         # https://papers.nips.cc/paper/5635-grammar-as-a-foreign-language.pdf
 
         # dt has size (batch_size, self.attn_gru_hidden_size, self.max_text_length)
         dt = attn_output.unsqueeze(2).expand(
-            batch_size, self.attn_gru_hidden_size, self.max_text_length) 
+            batch_size, self.attn_gru_hidden_size, self.max_text_length)
 
-        # u has size (batch_size, 1, self.attn_gru_hidden_size)
+        # v has size (batch_size, 1, self.attn_gru_hidden_size)
         v = self.v.unsqueeze(0).unsqueeze(1).expand(
             batch_size, 1, self.attn_gru_hidden_size)
 
         # u has size (batch_size, 1, self.max_text_length)
         u = v.bmm(F.tanh(_wx(self.w1, encoder_outputs.transpose(1, 2)) +
-                         _wx(self.w2, dt))) 
+                         _wx(self.w2, dt)))
 
         # a is attention weight vector, (batch_size, self.max_text_length)
         a = F.softmax(u.squeeze(1))
 
         # dtp has size (batch_size, 1, self.attn_gru_hidden_size)
-        dtp = torch.sum(encoder_outputs * a.unsqueeze(2).expand(
-            batch_size, self.max_text_length, self.attn_gru_hidden_size), 1)
+        dtp = torch.sum(
+            encoder_outputs * a.unsqueeze(2).expand(
+                batch_size, self.max_text_length, self.attn_gru_hidden_size), 1)
 
         # decoder_input has size (batch_size, self.attn_gru_hidden_size)
         decoder_input = self.attn_combine(
             torch.cat((attn_output, dtp.squeeze()), 1))
         decoder_output = decoder_input
 
+        new_decoder_gru_hiddens = []
         for i in range(self.decoder_num_layers):
             decoder_hidden = self.decoder_grus[i](decoder_output, 
                                                   decoder_gru_hiddens[i])
-            decoder_gru_hiddens[i] = decoder_hidden
-            decoder_output += F.relu(decoder_hidden)
+            new_decoder_gru_hiddens.append(decoder_hidden)
+            decoder_output = decoder_output + F.relu(decoder_hidden)
 
         output = F.softmax(self.out(decoder_output))
-        return output, attn_gru_hidden, decoder_gru_hiddens, a
+        return output, new_attn_gru_hidden, new_decoder_gru_hiddens, a
 
     def init_hiddens(self, batch_size):
         attn_gru_hidden = Variable(torch.zeros(batch_size, 

@@ -32,3 +32,5 @@ def test_encoder():
 	output = encoder(input)
 	assert output.size() == (batch_size, max_length, 2 * gru_units)
 
+	output[0, 0, 0].backward()
+

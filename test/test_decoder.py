@@ -26,3 +26,4 @@ def test_decoder():
     assert new_decoder_gru_hiddens[0].size() == (batch_size, decoder_gru_hidden_size)
 
     decoder(input, new_attn_gru_hidden, new_decoder_gru_hiddens, encoder_outputs)
+    output[0, 0].backward()
