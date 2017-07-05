@@ -41,15 +41,15 @@ class AttnDecoder(nn.Module):
 
         # initialize weights used in attention 
         # https://github.com/pytorch/pytorch/blob/master/torch/nn/init.py
-        self.w1 = Variable(torch.Tensor(self.attn_gru_hidden_size,
+        self.w1 = nn.Parameter(torch.Tensor(self.attn_gru_hidden_size,
                                         self.attn_gru_hidden_size))
         init.normal(self.w1)
 
-        self.w2 = Variable(torch.Tensor(self.attn_gru_hidden_size,
+        self.w2 = nn.Parameter(torch.Tensor(self.attn_gru_hidden_size,
                                         self.attn_gru_hidden_size))
         init.normal(self.w2)
 
-        self.v = Variable(torch.Tensor(self.attn_gru_hidden_size))
+        self.v = nn.Parameter(torch.Tensor(self.attn_gru_hidden_size))
         init.normal(self.v)
 
         # other layers
