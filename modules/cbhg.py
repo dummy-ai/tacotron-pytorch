@@ -7,7 +7,7 @@ from modules.highway import HighwayNet
 
 class CBHG(nn.Module):
 
-    def __init__(self, bank_k, bank_ck, proj_dims, 
+    def __init__(self, in_channels, bank_k, bank_ck, proj_dims, 
         highway_layers, highway_units, gru_units, gru_layers=1):
         super(CBHG, self).__init__()
         """
@@ -17,6 +17,7 @@ class CBHG(nn.Module):
             proj_dims: A pair of integers, specifying the
                 projection dimensions in Conv1D projection layer 
         """
+        self._in_channels = in_channels
         self._bank_k = bank_k
         self._bank_ck = bank_ck
         self._proj_dims = proj_dims
@@ -25,15 +26,19 @@ class CBHG(nn.Module):
         self._gru_units = gru_units
         self._gru_layers = gru_layers
 
-        self.convbank = Conv1dBankWithMaxPool(bank_k, 
-                                              bank_ck)
-        self.convproj = Conv1dProjection(proj_dims)
+        self.convbank = Conv1dBankWithMaxPool(in_channels, bank_k, bank_ck)
+        proj_in_channels = bank_k * bank_ck
+        self.convproj = Conv1dProjection(proj_in_channels, proj_dims)
         self.highway = HighwayNet(highway_layers, 
                                   highway_units)
 
         self.gru = nn.GRU(highway_units, gru_units, gru_layers, 
                           batch_first=True,
                           bidirectional=True)
+
+    @property
+    def in_channels(self):
+        return self._in_channels
 
     @property
     def bank_k(self):
@@ -68,7 +73,7 @@ class CBHG(nn.Module):
         Args:
             x: A Tensor of size (batch_size,
                                  time_steps,
-                                 in_channels)
+                                 self.in_channels)
 
         Returns:
             A Tensor of size (batch_size,
@@ -85,6 +90,7 @@ class CBHG(nn.Module):
         rnn_inputs = torch.transpose(highway_out, 1, 2).contiguous()
 
         batch_size = x.size()[0]
+        # TODO init_hidden
         h0 = Variable(torch.randn(self.gru_layers * 2, 
                                   batch_size, 
                                   self.gru_units))

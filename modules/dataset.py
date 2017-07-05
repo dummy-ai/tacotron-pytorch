@@ -112,7 +112,6 @@ class DataSet:
             mel_spectro = melscale(audio_file)
             padded_mel_spectro = pad_time_dim(
                 mel_spectro, self._max_audio_length, 0)
-
             self._spectros.append(padded_mel_spectro.transpose())
 
         self._spectros = np.stack(self._spectros, axis=0)

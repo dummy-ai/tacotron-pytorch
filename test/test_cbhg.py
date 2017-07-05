@@ -14,7 +14,7 @@ def test_cbhg():
     highway_layers = 4
     highway_units = 128
     gru_units = 128
-    cbhg = CBHG(bank_k, bank_ck, proj_dims, 
+    cbhg = CBHG(in_channels, bank_k, bank_ck, proj_dims, 
                 highway_layers, highway_units, gru_units)
 
     out = cbhg(inp)
