@@ -21,7 +21,7 @@ def test_highwaynet():
 
     num_layers = 4
     num_units = 128
-    highway = HighwayNet(4, 128)
+    highway = HighwayNet(in_channels, num_layers, num_units)
 
     out = highway(inp)
     assert out.size() == (batch_size, num_units, time_steps)

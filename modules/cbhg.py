@@ -29,8 +29,7 @@ class CBHG(nn.Module):
         self.convbank = Conv1dBankWithMaxPool(in_channels, bank_k, bank_ck)
         proj_in_channels = bank_k * bank_ck
         self.convproj = Conv1dProjection(proj_in_channels, proj_dims)
-        self.highway = HighwayNet(highway_layers, 
-                                  highway_units)
+        self.highway = HighwayNet(in_channels, highway_layers, highway_units)
 
         self.gru = nn.GRU(highway_units, gru_units, gru_layers, 
                           batch_first=True,
