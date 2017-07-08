@@ -20,8 +20,8 @@ def pad_time_dim(data, new_time, fill_constant):
     pad_time = new_time - data.shape[1]
     npad = ((0, 0), (0, pad_time))
     return np.pad(data,
-        pad_width=npad, 
-        mode='constant', 
+        pad_width=npad,
+        mode='constant',
         constant_values=fill_constant)
 
 def pad_indexes(indexes, new_length, fill_constant):
@@ -30,8 +30,8 @@ def pad_indexes(indexes, new_length, fill_constant):
     indexes = np.array(indexes, dtype=np.int)
     pad_length = new_length - indexes.shape[0]
     npad = ((0, pad_length))
-    return np.pad(indexes, 
-        pad_width=npad, 
+    return np.pad(indexes,
+        pad_width=npad,
         mode='constant',
         constant_values=fill_constant)
 
@@ -48,7 +48,7 @@ class Lang:
     def index_char(self, char):
         if char not in self.char2index:
             self.char2index[char] = self.num_chars
-            self.index2char[self.num_chars] = char 
+            self.index2char[self.num_chars] = char
             self.num_chars += 1
 
 class DataSet:
@@ -57,9 +57,9 @@ class DataSet:
         max_text_length=30, max_audio_length=100):
         assert len(texts) == len(audio_files), \
             "The length of texts doesn't match with the length of audios."
-        self._num_examples = len(texts) 
-        self._texts = texts 
-        self._audio_files = audio_files 
+        self._num_examples = len(texts)
+        self._texts = texts
+        self._audio_files = audio_files
         self._max_text_length = max_text_length
         self._max_audio_length = max_audio_length
 
@@ -84,11 +84,11 @@ class DataSet:
 
     @property
     def max_text_length(self):
-        return self._max_text_length 
+        return self._max_text_length
 
     @property
     def max_audio_length(self):
-        return self._max_audio_length 
+        return self._max_audio_length
 
     @property
     def epochs_completed(self):
@@ -127,7 +127,7 @@ class DataSet:
             np.random.shuffle(perm)
             self._spectros = self._spectros[perm]
             self._indexed_texts = self._indexed_texts[perm]
-            # Start next epoch 
+            # Start next epoch
             start = 0
             self._index_in_epoch = batch_size
             assert batch_size <= self._num_examples

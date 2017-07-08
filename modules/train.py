@@ -9,8 +9,9 @@ from torch.autograd import Variable
 from modules.decoder import AttnDecoder
 from modules.encoder import Encoder
 from modules.dataset import tiny_words
+from utils import Timed
 
-def train_single_batch(input_variable, target_variable, 
+def train_single_batch(input_variable, target_variable,
     encoder, decoder,
     encoder_optimizer, decoder_optimizer, criterion,
     teacher_forcing_ratio = 0.5,
@@ -18,34 +19,34 @@ def train_single_batch(input_variable, target_variable,
     """
     Args:
         input_variable: A Tensor of size (batch_size, max_text_length)
-        target_variable: A Tensor of size 
+        target_variable: A Tensor of size
             (batch_size, max_audio_length, frame_size)
     """
 
     # zero gradients of both optimizers
     encoder_optimizer.zero_grad()
     decoder_optimizer.zero_grad()
-    # added onto for each frame 
-    loss = 0 
+    # added onto for each frame
+    loss = 0
 
     # get batch size and initialize GO_frame
     batch_size = input_variable.size()[0]
     GO_frame = np.zeros((batch_size, decoder.frame_size))
 
-    # get target length 
+    # get target length
     target_length = target_variable.size()[1]
 
     # Run words through encoder
     encoder_outputs = encoder(input_variable)
-    
+
     # Prepare input and output variables
     decoder_input = Variable(torch.from_numpy(GO_frame).float())
-    attn_gru_hidden, decoder_gru_hiddens = decoder.init_hiddens(batch_size)  
+    attn_gru_hidden, decoder_gru_hiddens = decoder.init_hiddens(batch_size)
 
     # Choose whether to use teacher forcing
     use_teacher_forcing = random.random() < teacher_forcing_ratio
     if use_teacher_forcing:
-        
+
         # Teacher forcing: Use the ground-truth target as the next input
         for t in range(int(target_length / decoder.num_frames)):
             decoder_output, attn_gru_hidden, decoder_gru_hiddens, attn_weights = \
@@ -54,7 +55,7 @@ def train_single_batch(input_variable, target_variable,
                 batch_size, decoder.num_frames, decoder.frame_size).clone()
             truth_frames = \
                 target_variable[:, decoder.num_frames * t:decoder.num_frames * (t+1), :].clone()
-            loss += criterion(predict_frames, truth_frames) 
+            loss += criterion(predict_frames, truth_frames)
             # use truth
             decoder_input = target_variable[:, decoder.num_frames * (t+1) - 1, :].contiguous().clone()
 
@@ -67,8 +68,8 @@ def train_single_batch(input_variable, target_variable,
                 batch_size, decoder.num_frames, decoder.frame_size).clone()
             truth_frames = \
                 target_variable[:, decoder.num_frames * t:decoder.num_frames * (t+1), :].clone()
-            loss += criterion(predict_frames, truth_frames) 
-            # use predict 
+            loss += criterion(predict_frames, truth_frames)
+            # use predict
             decoder_input = predict_frames[:, -1, :].contiguous().clone()
 
     # Backpropagation
@@ -94,51 +95,53 @@ def time_since(since, percent):
 
 def train():
     # initalize dataset
-    ds = tiny_words()
+    with Timed('Loading dataset'):
+        ds = tiny_words()
 
-    # initialize model
-    embedding_dim = 256
-    bank_k = 16
-    bank_ck = 128
-    proj_dims = (128, 128)
-    highway_layers = 4
-    highway_units = 128
-    gru_units = 128
-    encoder = Encoder(ds.lang.num_chars, embedding_dim,
-        bank_k, bank_ck, proj_dims, highway_layers,
-        highway_units, gru_units)
+    with Timed('Initializing model.'):
+        # initialize model
+        embedding_dim = 256
+        bank_k = 16
+        bank_ck = 128
+        proj_dims = (128, 128)
+        highway_layers = 4
+        highway_units = 128
+        gru_units = 128
+        encoder = Encoder(ds.lang.num_chars, embedding_dim,
+            bank_k, bank_ck, proj_dims, highway_layers,
+            highway_units, gru_units)
 
-    decoder = AttnDecoder(ds.max_text_length)
+        decoder = AttnDecoder(ds.max_text_length)
 
-    # initialize optimizers and criterion
-    learning_rate = 0.0001
-    encoder_optimizer = optim.Adam(encoder.parameters(), lr=learning_rate)
-    decoder_optimizer = optim.Adam(decoder.parameters(), lr=learning_rate)
-    criterion = nn.L1Loss()
+        # initialize optimizers and criterion
+        learning_rate = 0.0001
+        encoder_optimizer = optim.Adam(encoder.parameters(), lr=learning_rate)
+        decoder_optimizer = optim.Adam(decoder.parameters(), lr=learning_rate)
+        criterion = nn.L1Loss()
 
-    # configuring traingin
-    n_epochs = 1000
-    plot_every = 200
-    print_every = 100
-    batch_size = 32
+        # configuring traingin
+        n_epochs = 1000
+        plot_every = 200
+        print_every = 100
+        batch_size = 32
 
-    # Keep track of time elapsed and running averages
-    start = time.time()
-    plot_losses = []
-    print_loss_total = 0 # Reset every print_every
-    plot_loss_total = 0 # Reset every plot_every
+        # Keep track of time elapsed and running averages
+        start = time.time()
+        plot_losses = []
+        print_loss_total = 0 # Reset every print_every
+        plot_loss_total = 0 # Reset every plot_every
 
     for epoch in range(1, n_epochs + 1):
-        
+
         # get training data for this cycle
         spectros, indexed_texts = ds.next_batch(batch_size)
         input_variable = Variable(torch.from_numpy(indexed_texts))
         target_variable = Variable(torch.from_numpy(spectros).float())
 
-        # train single batch 
-        loss = train_single_batch(input_variable, 
-            target_variable, encoder, decoder, 
-            encoder_optimizer, decoder_optimizer, 
+        # train single batch
+        loss = train_single_batch(input_variable,
+            target_variable, encoder, decoder,
+            encoder_optimizer, decoder_optimizer,
             criterion)
 
         # Keep track of loss

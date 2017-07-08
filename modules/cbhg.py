@@ -7,7 +7,7 @@ from modules.highway import HighwayNet
 
 class CBHG(nn.Module):
 
-    def __init__(self, in_channels, bank_k, bank_ck, proj_dims, 
+    def __init__(self, in_channels, bank_k, bank_ck, proj_dims,
         highway_layers, highway_units, gru_units, gru_layers=1):
         super(CBHG, self).__init__()
         """
@@ -15,7 +15,7 @@ class CBHG(nn.Module):
             bank_k, bank_ck: Two integers for Conv1D Bank
                 bank_k th set contains bank_ck filters of width k
             proj_dims: A pair of integers, specifying the
-                projection dimensions in Conv1D projection layer 
+                projection dimensions in Conv1D projection layer
         """
         self._in_channels = in_channels
         self._bank_k = bank_k
@@ -31,7 +31,7 @@ class CBHG(nn.Module):
         self.convproj = Conv1dProjection(proj_in_channels, proj_dims)
         self.highway = HighwayNet(in_channels, highway_layers, highway_units)
 
-        self.gru = nn.GRU(highway_units, gru_units, gru_layers, 
+        self.gru = nn.GRU(highway_units, gru_units, gru_layers,
                           batch_first=True,
                           bidirectional=True)
 
@@ -90,8 +90,8 @@ class CBHG(nn.Module):
 
         batch_size = x.size()[0]
         # TODO init_hidden
-        h0 = Variable(torch.randn(self.gru_layers * 2, 
-                                  batch_size, 
+        h0 = Variable(torch.randn(self.gru_layers * 2,
+                                  batch_size,
                                   self.gru_units))
         final_output, _ = self.gru(rnn_inputs, h0)
         return final_output
