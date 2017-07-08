@@ -4,6 +4,7 @@ import collections
 import numpy as np
 from modules.melscale import melscale
 from modules.path import root_path
+from utils import ProgressBar
 
 # create Datasets type
 Datasets = collections.namedtuple('Datasets', ['train', 'validation', 'test'])
@@ -52,6 +53,7 @@ class Lang:
             self.num_chars += 1
 
 class DataSet:
+    VERSION = '0.1'
 
     def __init__(self, texts, audio_files,
         max_text_length=30, max_audio_length=100):
@@ -108,11 +110,17 @@ class DataSet:
 
         self._indexed_texts = np.stack(self._indexed_texts, axis=0)
 
+        bar = ProgressBar(len(self._audio_files), unit='')
+        audio_files_read = 0
         for audio_file in self._audio_files:
             mel_spectro = melscale(audio_file)
             padded_mel_spectro = pad_time_dim(
                 mel_spectro, self._max_audio_length, 0)
             self._spectros.append(padded_mel_spectro.transpose())
+
+            bar.update(audio_files_read)
+            audio_files_read += 1
+
 
         self._spectros = np.stack(self._spectros, axis=0)
 
@@ -135,8 +143,7 @@ class DataSet:
         return self._spectros[start:end], self._indexed_texts[start:end]
 
 def tiny_words(max_text_length=20, max_audio_length=30):
-    data_path = os.path.join(root_path,
-        'data/tiny-words-v0/')
+    data_path = os.path.join('/mnt/dataset/tts/tiny-words-v0')
     meta_list = json.load(
         open(os.path.join(data_path, 'meta.json'), 'r'))
     texts = [x['text'] for x in meta_list]
