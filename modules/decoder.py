@@ -33,7 +33,7 @@ class AttnDecoder(nn.Module):
         self.attn_gru = nn.GRUCell(self.attn_gru_input_size,
                                    self.attn_gru_hidden_size)
         # decoder gru
-        self.decoder_grus = []
+        self.decoder_grus = nn.ModuleList() 
         for i in range(self.decoder_num_layers):
             self.decoder_grus.append(
                 nn.GRUCell(self.decoder_gru_hidden_size,
