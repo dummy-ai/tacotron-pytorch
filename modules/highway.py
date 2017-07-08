@@ -17,14 +17,14 @@ class HighwayNet(nn.Module):
         if in_channels != num_units:
             self.pre_fc = SeqLinear(in_channels, num_units)
 
-        # initialize fc layers 
+        # initialize fc layers
         self.Hs = nn.ModuleList(
             [SeqLinear(num_units, num_units) for i in range(num_layers)])
 
         # initalize gates
         self.Ts = nn.ModuleList()
         for i in range(num_layers):
-            T = SeqLinear(num_units, num_units) 
+            T = SeqLinear(num_units, num_units)
             T.linear.bias.data.fill_(self.gate_fc_bias)
             self.Ts.append(T)
 

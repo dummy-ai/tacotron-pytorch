@@ -1,8 +1,11 @@
 import time
 import math
 import random
+import sys
+import traceback
 import numpy as np
 import torch
+import argparse
 import torch.nn as nn
 from torch import optim
 from torch.autograd import Variable
@@ -93,10 +96,10 @@ def time_since(since, percent):
     rs = es - s
     return '%s (- %s)' % (as_minutes(s), as_minutes(rs))
 
-def train():
+def train(data_size=sys.maxsize):
     # initalize dataset
     with Timed('Loading dataset'):
-        ds = tiny_words()
+        ds = tiny_words(max_dataset_size=data_size)
 
     with Timed('Initializing model.'):
         # initialize model
@@ -162,7 +165,16 @@ def train():
             plot_loss_total = 0
 
 def main():
-    train()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--data-size', default=sys.maxsize, type=int)
+
+    args = parser.parse_args()
+    try:
+        return train(data_size=args.data_size)
+    except Exception as e:
+        traceback.print_exc()
+        print('[Error]', str(e))
+        return 1
 
 if __name__ == "__main__":
-    main()
+    exit(main())

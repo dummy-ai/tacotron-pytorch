@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import collections
 import numpy as np
@@ -142,14 +143,19 @@ class DataSet:
         end = self._index_in_epoch
         return self._spectros[start:end], self._indexed_texts[start:end]
 
-def tiny_words(max_text_length=20, max_audio_length=30):
-    data_path = os.path.join('/mnt/dataset/tts/tiny-words-v0')
+def tiny_words(max_text_length=20, max_audio_length=30, max_dataset_size=sys.maxsize):
+    data_path = os.path.join('/home/core/tts/tiny-words-v0')
     meta_list = json.load(
         open(os.path.join(data_path, 'meta.json'), 'r'))
     texts = [x['text'] for x in meta_list]
     audios = [os.path.join(data_path, x['audio']) for x in meta_list]
+
+    texts = texts[:max_dataset_size]
+    audios = audios[:max_dataset_size]
+
     return DataSet(texts, audios,
-        max_text_length=max_text_length, max_audio_length=max_audio_length)
+                   max_text_length=max_text_length,
+                   max_audio_length=max_audio_length)
 
 def main():
     BATCH_SIZE = 32
