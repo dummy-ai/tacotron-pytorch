@@ -92,6 +92,6 @@ class CBHG(nn.Module):
         # TODO init_hidden
         h0 = Variable(torch.randn(self.gru_layers * 2, 
                                   batch_size, 
-                                  self.gru_units))
+                                  self.gru_units)).cuda()
         final_output, _ = self.gru(rnn_inputs, h0)
         return final_output
