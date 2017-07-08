@@ -96,10 +96,10 @@ def time_since(since, percent):
     rs = es - s
     return '%s (- %s)' % (as_minutes(s), as_minutes(rs))
 
-def train(data_size=sys.maxsize):
+def train(args):
     # initalize dataset
     with Timed('Loading dataset'):
-        ds = tiny_words(max_dataset_size=data_size)
+        ds = tiny_words(max_dataset_size=args.data_size)
 
     with Timed('Initializing model.'):
         # initialize model
@@ -112,7 +112,7 @@ def train(data_size=sys.maxsize):
         gru_units = 128
         encoder = Encoder(ds.lang.num_chars, embedding_dim,
             bank_k, bank_ck, proj_dims, highway_layers,
-            highway_units, gru_units)
+            highway_units, gru_units, dropout=args.dropout)
 
         decoder = AttnDecoder(ds.max_text_length)
 
@@ -167,10 +167,11 @@ def train(data_size=sys.maxsize):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--data-size', default=sys.maxsize, type=int)
+    parser.add_argument('--dropout', default=0.5, type=float, help='Dropout ratio for prenet')
 
     args = parser.parse_args()
     try:
-        return train(data_size=args.data_size)
+        return train(args)
     except Exception as e:
         traceback.print_exc()
         print('[Error]', str(e))

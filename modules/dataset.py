@@ -111,7 +111,7 @@ class DataSet:
 
         self._indexed_texts = np.stack(self._indexed_texts, axis=0)
 
-        bar = ProgressBar(len(self._audio_files), unit='')
+        bar = ProgressBar(len(self._audio_files) - 1, unit='')
         audio_files_read = 0
         for audio_file in self._audio_files:
             mel_spectro = melscale(audio_file)
