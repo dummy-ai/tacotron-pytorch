@@ -22,7 +22,8 @@ def train_single_batch(input_variable, target_variable,
     encoder, decoder,
     encoder_optimizer, decoder_optimizer, criterion,
     teacher_forcing_ratio = 0.5,
-    clip = 5.0):
+    clip = 5.0,
+    use_cuda=False): 
     """
     Args:
         input_variable: A Tensor of size (batch_size, max_text_length)
@@ -48,6 +49,8 @@ def train_single_batch(input_variable, target_variable,
     
     # Prepare input and output variables
     decoder_input = Variable(torch.from_numpy(GO_frame).float())
+    if use_cuda:
+        decoder_input.cuda()
     attn_gru_hidden, decoder_gru_hiddens = decoder.init_hiddens(batch_size)  
 
     # Choose whether to use teacher forcing
@@ -158,7 +161,7 @@ def train(args):
         loss = train_single_batch(input_variable, 
             target_variable, encoder, decoder, 
             encoder_optimizer, decoder_optimizer, 
-            criterion)
+            criterion, use_cuda=args.use_cuda)
 
         # Keep track of loss
         print_loss_total += loss
