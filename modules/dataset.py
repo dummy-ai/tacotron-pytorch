@@ -1,9 +1,11 @@
 import os
+import sys
 import json
 import collections
 import numpy as np
 from modules.melscale import melscale
 from modules.path import root_path
+from utils import ProgressBar
 
 # create Datasets type
 Datasets = collections.namedtuple('Datasets', ['train', 'validation', 'test'])
@@ -20,8 +22,8 @@ def pad_time_dim(data, new_time, fill_constant):
     pad_time = new_time - data.shape[1]
     npad = ((0, 0), (0, pad_time))
     return np.pad(data,
-        pad_width=npad, 
-        mode='constant', 
+        pad_width=npad,
+        mode='constant',
         constant_values=fill_constant)
 
 def pad_indexes(indexes, new_length, fill_constant):
@@ -30,8 +32,8 @@ def pad_indexes(indexes, new_length, fill_constant):
     indexes = np.array(indexes, dtype=np.int)
     pad_length = new_length - indexes.shape[0]
     npad = ((0, pad_length))
-    return np.pad(indexes, 
-        pad_width=npad, 
+    return np.pad(indexes,
+        pad_width=npad,
         mode='constant',
         constant_values=fill_constant)
 
@@ -48,18 +50,19 @@ class Lang:
     def index_char(self, char):
         if char not in self.char2index:
             self.char2index[char] = self.num_chars
-            self.index2char[self.num_chars] = char 
+            self.index2char[self.num_chars] = char
             self.num_chars += 1
 
 class DataSet:
+    VERSION = '0.1'
 
     def __init__(self, texts, audio_files,
         max_text_length=30, max_audio_length=100):
         assert len(texts) == len(audio_files), \
             "The length of texts doesn't match with the length of audios."
-        self._num_examples = len(texts) 
-        self._texts = texts 
-        self._audio_files = audio_files 
+        self._num_examples = len(texts)
+        self._texts = texts
+        self._audio_files = audio_files
         self._max_text_length = max_text_length
         self._max_audio_length = max_audio_length
 
@@ -84,11 +87,11 @@ class DataSet:
 
     @property
     def max_text_length(self):
-        return self._max_text_length 
+        return self._max_text_length
 
     @property
     def max_audio_length(self):
-        return self._max_audio_length 
+        return self._max_audio_length
 
     @property
     def epochs_completed(self):
@@ -108,11 +111,14 @@ class DataSet:
 
         self._indexed_texts = np.stack(self._indexed_texts, axis=0)
 
-        for audio_file in self._audio_files:
+        bar = ProgressBar(len(self._audio_files) - 1, unit='')
+        for (audio_files_read, audio_file) in enumerate(self._audio_files):
             mel_spectro = melscale(audio_file)
             padded_mel_spectro = pad_time_dim(
                 mel_spectro, self._max_audio_length, 0)
             self._spectros.append(padded_mel_spectro.transpose())
+
+            bar.update(audio_files_read)
 
         self._spectros = np.stack(self._spectros, axis=0)
 
@@ -127,22 +133,26 @@ class DataSet:
             np.random.shuffle(perm)
             self._spectros = self._spectros[perm]
             self._indexed_texts = self._indexed_texts[perm]
-            # Start next epoch 
+            # Start next epoch
             start = 0
             self._index_in_epoch = batch_size
             assert batch_size <= self._num_examples
         end = self._index_in_epoch
         return self._spectros[start:end], self._indexed_texts[start:end]
 
-def tiny_words(max_text_length=20, max_audio_length=30):
-    data_path = os.path.join(root_path,
-        'data/tiny-words-v0/')
+def tiny_words(max_text_length=20, max_audio_length=30, max_dataset_size=sys.maxsize):
+    data_path = os.path.join('/home/core/tts/tiny-words-v0')
     meta_list = json.load(
         open(os.path.join(data_path, 'meta.json'), 'r'))
     texts = [x['text'] for x in meta_list]
     audios = [os.path.join(data_path, x['audio']) for x in meta_list]
+
+    texts = texts[:max_dataset_size]
+    audios = audios[:max_dataset_size]
+
     return DataSet(texts, audios,
-        max_text_length=max_text_length, max_audio_length=max_audio_length)
+                   max_text_length=max_text_length,
+                   max_audio_length=max_audio_length)
 
 def main():
     BATCH_SIZE = 32
