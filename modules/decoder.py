@@ -41,20 +41,21 @@ class AttnDecoder(nn.Module):
 
         # initialize weights used in attention 
         # https://github.com/pytorch/pytorch/blob/master/torch/nn/init.py
-        self.w1 = nn.Parameter(torch.Tensor(self.attn_gru_hidden_size,
-                                        self.attn_gru_hidden_size))
-        init.normal(self.w1)
-
-        self.w2 = nn.Parameter(torch.Tensor(self.attn_gru_hidden_size,
-                                        self.attn_gru_hidden_size))
-        init.normal(self.w2)
-
-        self.v = nn.Parameter(torch.Tensor(self.attn_gru_hidden_size))
-        init.normal(self.v)
+        w1 = torch.Tensor(self.attn_gru_hidden_size, self.attn_gru_hidden_size)
+        w2 = torch.Tensor(self.attn_gru_hidden_size, self.attn_gru_hidden_size)
+        v1 = torch.Tensor(self.attn_gru_hidden_size)
         if use_cuda:
-            self.w1 = self.w1.cuda()
-            self.w2 = self.w2.cuda()
-            self.v = self.v.cuda()
+            self.w1 = nn.Parameter(w1.cuda())
+            self.w2 = nn.Parameter(w2.cuda())
+            self.v1 = nn.Parameter(v1.cuda())
+        else:
+            self.w1 = nn.Parameter(w1)
+            self.w2 = nn.Parameter(w2)
+            self.v1 = nn.Parameter(v1)
+
+        init.normal(self.w1)
+        init.normal(self.w2)
+        init.normal(self.v)
 
         # other layers
         self.attn_combine = nn.Linear(self.attn_gru_hidden_size * 2, self.attn_gru_hidden_size)
