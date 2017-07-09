@@ -51,6 +51,10 @@ class AttnDecoder(nn.Module):
 
         self.v = nn.Parameter(torch.Tensor(self.attn_gru_hidden_size))
         init.normal(self.v)
+        if use_cuda:
+            self.w1 = self.w1.cuda()
+            self.w2 = self.w2.cuda()
+            self.v = self.v.cuda()
 
         # other layers
         self.attn_combine = nn.Linear(self.attn_gru_hidden_size * 2, self.attn_gru_hidden_size)
@@ -135,7 +139,7 @@ class AttnDecoder(nn.Module):
             decoder_gru_hiddens.append(
                 Variable(torch.zeros(batch_size, self.decoder_gru_hidden_size)))
         if self.use_cuda:
-            attn_gru_hidden.cuda()
-            map(lambda x: x.cuda(), decoder_gru_hiddens)
+            attn_gru_hidden = attn_gru_hidden.cuda()
+            decoder_gru_hiddens = [v.cuda() for v in decoder_gru_hiddens]
         return attn_gru_hidden, decoder_gru_hiddens
 

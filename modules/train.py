@@ -50,7 +50,7 @@ def train_single_batch(input_variable, target_variable,
     # Prepare input and output variables
     decoder_input = Variable(torch.from_numpy(GO_frame).float())
     if use_cuda:
-        decoder_input.cuda()
+        decoder_input = decoder_input.cuda()
     attn_gru_hidden, decoder_gru_hiddens = decoder.init_hiddens(batch_size)  
 
     # Choose whether to use teacher forcing
@@ -154,8 +154,9 @@ def train(args):
         target_variable = Variable(torch.from_numpy(spectros).float())
 
         if args.use_cuda:
-            input_variable.cuda()
-            target_variable.cuda()
+            input_variable = input_variable.cuda()
+            target_variable = target_variable.cuda()
+
 
         # train single batch 
         loss = train_single_batch(input_variable, 
