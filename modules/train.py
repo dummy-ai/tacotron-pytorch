@@ -14,11 +14,22 @@ from modules.encoder import Encoder
 from modules.dataset import tiny_words
 from utils import Timed
 
+
+parser = argparse.ArgumentParser(
+    description="Train an Tacotron model for speech synthesis")
+parser.add_argument("--max-epochs", type=int, default=100000)
+parser.add_argument('--use-cuda', dest='use_cuda', action='store_true')
+parser.set_defaults(use_cuda=False)
+parser.add_argument('-d', '--data-size', default=sys.maxsize, type=int)
+parser.add_argument('--dropout', default=0.5, type=float, help='Dropout ratio for prenet')
+
+
 def train_single_batch(input_variable, target_variable,
     encoder, decoder,
     encoder_optimizer, decoder_optimizer, criterion,
     teacher_forcing_ratio = 0.5,
-    clip = 5.0):
+    clip = 5.0,
+    use_cuda=False):
     """
     Args:
         input_variable: A Tensor of size (batch_size, max_text_length)
@@ -44,6 +55,8 @@ def train_single_batch(input_variable, target_variable,
 
     # Prepare input and output variables
     decoder_input = Variable(torch.from_numpy(GO_frame).float())
+    if use_cuda:
+        decoder_input = decoder_input.cuda()
     attn_gru_hidden, decoder_gru_hiddens = decoder.init_hiddens(batch_size)
 
     # Choose whether to use teacher forcing
@@ -101,8 +114,8 @@ def train(args):
     with Timed('Loading dataset'):
         ds = tiny_words(max_dataset_size=args.data_size)
 
+    # initialize model
     with Timed('Initializing model.'):
-        # initialize model
         embedding_dim = 256
         bank_k = 16
         bank_ck = 128
@@ -114,7 +127,11 @@ def train(args):
             bank_k, bank_ck, proj_dims, highway_layers,
             highway_units, gru_units, dropout=args.dropout)
 
-        decoder = AttnDecoder(ds.max_text_length)
+        decoder = AttnDecoder(ds.max_text_length, use_cuda=args.use_cuda)
+
+        if args.use_cuda:
+            encoder.cuda()
+            decoder.cuda()
 
         # initialize optimizers and criterion
         learning_rate = 0.0001
@@ -123,7 +140,7 @@ def train(args):
         criterion = nn.L1Loss()
 
         # configuring traingin
-        n_epochs = 1000
+        n_epochs = args.max_epochs
         plot_every = 200
         print_every = 100
         batch_size = 32
@@ -141,11 +158,16 @@ def train(args):
         input_variable = Variable(torch.from_numpy(indexed_texts))
         target_variable = Variable(torch.from_numpy(spectros).float())
 
+        if args.use_cuda:
+            input_variable = input_variable.cuda()
+            target_variable = target_variable.cuda()
+
+
         # train single batch
         loss = train_single_batch(input_variable,
             target_variable, encoder, decoder,
             encoder_optimizer, decoder_optimizer,
-            criterion)
+            criterion, use_cuda=args.use_cuda)
 
         # Keep track of loss
         print_loss_total += loss
@@ -165,11 +187,8 @@ def train(args):
             plot_loss_total = 0
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-d', '--data-size', default=sys.maxsize, type=int)
-    parser.add_argument('--dropout', default=0.5, type=float, help='Dropout ratio for prenet')
-
     args = parser.parse_args()
+
     try:
         return train(args)
     except Exception as e:
@@ -179,3 +198,4 @@ def main():
 
 if __name__ == "__main__":
     exit(main())
+

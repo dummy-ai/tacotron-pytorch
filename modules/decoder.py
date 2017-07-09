@@ -41,15 +41,20 @@ class AttnDecoder(nn.Module):
 
         # initialize weights used in attention 
         # https://github.com/pytorch/pytorch/blob/master/torch/nn/init.py
-        self.w1 = nn.Parameter(torch.Tensor(self.attn_gru_hidden_size,
-                                        self.attn_gru_hidden_size))
+        w1 = torch.Tensor(self.attn_gru_hidden_size, self.attn_gru_hidden_size)
+        w2 = torch.Tensor(self.attn_gru_hidden_size, self.attn_gru_hidden_size)
+        v = torch.Tensor(self.attn_gru_hidden_size)
+        if use_cuda:
+            self.w1 = nn.Parameter(w1.cuda())
+            self.w2 = nn.Parameter(w2.cuda())
+            self.v = nn.Parameter(v.cuda())
+        else:
+            self.w1 = nn.Parameter(w1)
+            self.w2 = nn.Parameter(w2)
+            self.v = nn.Parameter(v)
+
         init.normal(self.w1)
-
-        self.w2 = nn.Parameter(torch.Tensor(self.attn_gru_hidden_size,
-                                        self.attn_gru_hidden_size))
         init.normal(self.w2)
-
-        self.v = nn.Parameter(torch.Tensor(self.attn_gru_hidden_size))
         init.normal(self.v)
 
         # other layers
@@ -93,7 +98,7 @@ class AttnDecoder(nn.Module):
         # https://papers.nips.cc/paper/5635-grammar-as-a-foreign-language.pdf
 
         # dt has size (batch_size, self.attn_gru_hidden_size, self.max_text_length)
-        dt = attn_output.unsqueeze(2).expand(
+        dt = attn_output.unsqueeze(2).repeat(
             batch_size, self.attn_gru_hidden_size, self.max_text_length)
 
         # v has size (batch_size, 1, self.attn_gru_hidden_size)
@@ -135,7 +140,7 @@ class AttnDecoder(nn.Module):
             decoder_gru_hiddens.append(
                 Variable(torch.zeros(batch_size, self.decoder_gru_hidden_size)))
         if self.use_cuda:
-            attn_gru_hidden.cuda()
-            map(lambda x: x.cuda(), decoder_gru_hiddens)
+            attn_gru_hidden = attn_gru_hidden.cuda()
+            decoder_gru_hiddens = [v.cuda() for v in decoder_gru_hiddens]
         return attn_gru_hidden, decoder_gru_hiddens
 
