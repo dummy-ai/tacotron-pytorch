@@ -43,15 +43,15 @@ class AttnDecoder(nn.Module):
         # https://github.com/pytorch/pytorch/blob/master/torch/nn/init.py
         w1 = torch.Tensor(self.attn_gru_hidden_size, self.attn_gru_hidden_size)
         w2 = torch.Tensor(self.attn_gru_hidden_size, self.attn_gru_hidden_size)
-        v1 = torch.Tensor(self.attn_gru_hidden_size)
+        v = torch.Tensor(self.attn_gru_hidden_size)
         if use_cuda:
             self.w1 = nn.Parameter(w1.cuda())
             self.w2 = nn.Parameter(w2.cuda())
-            self.v1 = nn.Parameter(v1.cuda())
+            self.v = nn.Parameter(v.cuda())
         else:
             self.w1 = nn.Parameter(w1)
             self.w2 = nn.Parameter(w2)
-            self.v1 = nn.Parameter(v1)
+            self.v = nn.Parameter(v)
 
         init.normal(self.w1)
         init.normal(self.w2)
