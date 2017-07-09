@@ -98,7 +98,7 @@ class AttnDecoder(nn.Module):
         # https://papers.nips.cc/paper/5635-grammar-as-a-foreign-language.pdf
 
         # dt has size (batch_size, self.attn_gru_hidden_size, self.max_text_length)
-        dt = attn_output.unsqueeze(2).expand(
+        dt = attn_output.unsqueeze(2).repeat(
             batch_size, self.attn_gru_hidden_size, self.max_text_length)
 
         # v has size (batch_size, 1, self.attn_gru_hidden_size)
