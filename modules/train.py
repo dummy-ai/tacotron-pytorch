@@ -27,7 +27,7 @@ parser.add_argument('--dropout', default=0.5, type=float, help='Dropout ratio fo
 def train_single_batch(input_variable, target_variable,
     encoder, decoder,
     encoder_optimizer, decoder_optimizer, criterion,
-    teacher_forcing_ratio = 0.5,
+    teacher_forcing_ratio = 1.,
     clip = 5.0,
     use_cuda=False):
     """
@@ -64,16 +64,17 @@ def train_single_batch(input_variable, target_variable,
     if use_teacher_forcing:
 
         # Teacher forcing: Use the ground-truth target as the next input
-        for t in range(int(target_length / decoder.num_frames)):
+        #for t in range(int(target_length / decoder.num_frames)):
+        for t in range(1):
             decoder_output, attn_gru_hidden, decoder_gru_hiddens, attn_weights = \
                 decoder(decoder_input, attn_gru_hidden, decoder_gru_hiddens, encoder_outputs)
             predict_frames = decoder_output.view(
-                batch_size, decoder.num_frames, decoder.frame_size).clone()
+                batch_size, decoder.num_frames, decoder.frame_size)
             truth_frames = \
                 target_variable[:, decoder.num_frames * t:decoder.num_frames * (t+1), :].clone()
             loss += criterion(predict_frames, truth_frames)
             # use truth
-            decoder_input = target_variable[:, decoder.num_frames * (t+1) - 1, :].contiguous().clone()
+            decoder_input = target_variable[:, decoder.num_frames * (t+1) - 1, :].contiguous()
 
     else:
         # Without teacher forcing: use network's own prediction as the next input
@@ -81,19 +82,24 @@ def train_single_batch(input_variable, target_variable,
             decoder_output, attn_gru_hidden, decoder_gru_hiddens, attn_weights = \
                 decoder(decoder_input, attn_gru_hidden, decoder_gru_hiddens, encoder_outputs)
             predict_frames = decoder_output.view(
-                batch_size, decoder.num_frames, decoder.frame_size).clone()
+                batch_size, decoder.num_frames, decoder.frame_size)
             truth_frames = \
                 target_variable[:, decoder.num_frames * t:decoder.num_frames * (t+1), :].clone()
             loss += criterion(predict_frames, truth_frames)
             # use predict
-            decoder_input = predict_frames[:, -1, :].contiguous().clone()
+            decoder_input = predict_frames[:, -1, :].contiguous()
 
     # Backpropagation
     loss.backward()
-    torch.nn.utils.clip_grad_norm(encoder.parameters(), clip)
-    torch.nn.utils.clip_grad_norm(decoder.parameters(), clip)
+    #torch.nn.utils.clip_grad_norm(encoder.parameters(), clip)
+    #torch.nn.utils.clip_grad_norm(decoder.parameters(), clip)
+    # import pdb; pdb.set_trace();
+    #import pdb; pdb.set_trace();
     encoder_optimizer.step()
     decoder_optimizer.step()
+
+    print(decoder.out.weight)
+    print('grad', decoder.out.weight.grad)
 
     return loss.data[0] / target_length
 
@@ -134,15 +140,17 @@ def train(args):
             decoder.cuda()
 
         # initialize optimizers and criterion
-        learning_rate = 1e-1
-        encoder_optimizer = optim.Adam(encoder.parameters(), lr=learning_rate)
-        decoder_optimizer = optim.Adam(decoder.parameters(), lr=learning_rate)
+        learning_rate = 1e3
+        # encoder_optimizer = optim.Adam(encoder.parameters(), lr=learning_rate)
+        # decoder_optimizer = optim.Adam(decoder.parameters(), lr=learning_rate)
+        encoder_optimizer = optim.SGD(encoder.parameters(), lr=learning_rate)
+        decoder_optimizer = optim.SGD(decoder.parameters(), lr=learning_rate)
         criterion = nn.L1Loss()
 
         # configuring traingin
         n_epochs = args.max_epochs
         plot_every = 200
-        print_every = 100
+        print_every = 1
         batch_size = 32
 
         # Keep track of time elapsed and running averages
