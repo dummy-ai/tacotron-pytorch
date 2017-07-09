@@ -9,7 +9,7 @@ from modules.prenet import PreNet
 class AttnDecoder(nn.Module):
 
     def __init__(self, max_text_length,
-        attn_gru_hidden_size=256, 
+        attn_gru_hidden_size=256,
         frame_size=80, num_frames=3,
         decoder_gru_hidden_size=256,
         decoder_num_layers=2,
@@ -19,8 +19,8 @@ class AttnDecoder(nn.Module):
         self.frame_size = frame_size
         self.num_frames = num_frames
         self.decoder_gru_hidden_size = decoder_gru_hidden_size
-        self.decoder_output_size = frame_size * num_frames 
-        self.decoder_num_layers = decoder_num_layers 
+        self.decoder_output_size = frame_size * num_frames
+        self.decoder_num_layers = decoder_num_layers
         self.max_text_length = max_text_length
         self.use_cuda = use_cuda
 
@@ -29,17 +29,17 @@ class AttnDecoder(nn.Module):
         self.prenet = PreNet(frame_size)
         self.attn_gru_input_size = self.prenet.fc2_hidden_size
 
-        # attn gru 
+        # attn gru
         self.attn_gru = nn.GRUCell(self.attn_gru_input_size,
                                    self.attn_gru_hidden_size)
         # decoder gru
-        self.decoder_grus = nn.ModuleList() 
+        self.decoder_grus = nn.ModuleList()
         for i in range(self.decoder_num_layers):
             self.decoder_grus.append(
                 nn.GRUCell(self.decoder_gru_hidden_size,
                            self.decoder_gru_hidden_size))
 
-        # initialize weights used in attention 
+        # initialize weights used in attention
         # https://github.com/pytorch/pytorch/blob/master/torch/nn/init.py
         w1 = torch.Tensor(self.attn_gru_hidden_size, self.attn_gru_hidden_size)
         w2 = torch.Tensor(self.attn_gru_hidden_size, self.attn_gru_hidden_size)
@@ -60,20 +60,20 @@ class AttnDecoder(nn.Module):
         # other layers
         self.attn_combine = nn.Linear(self.attn_gru_hidden_size * 2, self.attn_gru_hidden_size)
 
-        self.out = nn.Linear(self.decoder_gru_hidden_size, 
+        self.out = nn.Linear(self.decoder_gru_hidden_size,
                              self.decoder_output_size)
 
     def forward(self, input, attn_gru_hidden, decoder_gru_hiddens, encoder_outputs):
         """
         Args:
-            input: last output frame from previous time step 
-                with size (batch_size, frame_size) 
+            input: last output frame from previous time step
+                with size (batch_size, frame_size)
             attn_gru_hidden: hidden state of attn rnn,
-                with size (batch_size, attn_gru_hidden_size) 
+                with size (batch_size, attn_gru_hidden_size)
             decoder_gru_hiddens: A list of Tensors of length decoder_num_layers,
                 each with size (batch_size, decoder_gru_hidden_size)
             encoder_outputs: A Tensor of size (batch_size,
-                                               time_steps, 
+                                               time_steps,
                                                2 * encoder_hidden_size)
                 time_steps = self.max_text_length
                 2 * encoder_hidden_size = attn_gru_hidden_size
@@ -84,7 +84,7 @@ class AttnDecoder(nn.Module):
             decoder_gru_hiddens: See above
             a: Attention weights, a Tensor of size (batch_size, max_text_length)
         """
-        batch_size = input.size()[0] 
+        batch_size = input.size()[0]
         pre_out  = self.prenet(
             input.view(batch_size, 1, self.frame_size)
         ).squeeze()
@@ -98,8 +98,7 @@ class AttnDecoder(nn.Module):
         # https://papers.nips.cc/paper/5635-grammar-as-a-foreign-language.pdf
 
         # dt has size (batch_size, self.attn_gru_hidden_size, self.max_text_length)
-        dt = attn_output.unsqueeze(2).repeat(
-            batch_size, self.attn_gru_hidden_size, self.max_text_length)
+        dt = attn_output.unsqueeze(2).repeat(1, 1, self.max_text_length)
 
         # v has size (batch_size, 1, self.attn_gru_hidden_size)
         v = self.v.unsqueeze(0).unsqueeze(1).expand(
@@ -124,7 +123,7 @@ class AttnDecoder(nn.Module):
 
         new_decoder_gru_hiddens = []
         for i in range(self.decoder_num_layers):
-            decoder_hidden = self.decoder_grus[i](decoder_output, 
+            decoder_hidden = self.decoder_grus[i](decoder_output,
                                                   decoder_gru_hiddens[i])
             new_decoder_gru_hiddens.append(decoder_hidden)
             decoder_output = decoder_output + F.relu(decoder_hidden)
@@ -133,12 +132,14 @@ class AttnDecoder(nn.Module):
         return output, new_attn_gru_hidden, new_decoder_gru_hiddens, a
 
     def init_hiddens(self, batch_size):
-        attn_gru_hidden = Variable(torch.zeros(batch_size, 
-                                           self.attn_gru_hidden_size))
+        attn_gru_hidden = Variable(torch.zeros(batch_size,
+                                           self.attn_gru_hidden_size),
+                                   requires_grad=True)
         decoder_gru_hiddens = []
         for i in range(self.decoder_num_layers):
             decoder_gru_hiddens.append(
-                Variable(torch.zeros(batch_size, self.decoder_gru_hidden_size)))
+                Variable(torch.zeros(batch_size, self.decoder_gru_hidden_size),
+                         requires_grad=True))
         if self.use_cuda:
             attn_gru_hidden = attn_gru_hidden.cuda()
             decoder_gru_hiddens = [v.cuda() for v in decoder_gru_hiddens]

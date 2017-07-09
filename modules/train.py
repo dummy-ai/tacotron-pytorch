@@ -134,7 +134,7 @@ def train(args):
             decoder.cuda()
 
         # initialize optimizers and criterion
-        learning_rate = 0.0001
+        learning_rate = 1e-1
         encoder_optimizer = optim.Adam(encoder.parameters(), lr=learning_rate)
         decoder_optimizer = optim.Adam(decoder.parameters(), lr=learning_rate)
         criterion = nn.L1Loss()
