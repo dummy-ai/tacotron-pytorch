@@ -7,5 +7,7 @@ sync:
 
 ssh:
 	ssh -ti $(SERVER_KEY) $(SERVER_USER)@$(SERVER_IP) "cd tacotron && bash"
-	
 
+base:
+	curl https://repo.continuum.io/archive/Anaconda3-4.4.0-Linux-x86_64.sh > /tmp/Anaconda3-4.4.0-Linux-x86_64.sh
+	bash /tmp/Anaconda3-4.4.0-Linux-x86_64.sh
