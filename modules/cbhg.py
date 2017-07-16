@@ -5,10 +5,11 @@ from torch.autograd import Variable
 from modules.conv1d import Conv1dBankWithMaxPool, Conv1dProjection
 from modules.highway import HighwayNet
 
+
 class CBHG(nn.Module):
 
     def __init__(self, in_channels, bank_k, bank_ck, proj_dims,
-        highway_layers, highway_units, gru_units, gru_layers=1):
+                 highway_layers, highway_units, gru_units, gru_layers=1):
         super(CBHG, self).__init__()
         """
         Args:

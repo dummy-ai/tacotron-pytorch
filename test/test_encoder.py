@@ -25,11 +25,11 @@ def test_encoder():
                 size=(batch_size, max_length)
             )
         )
-    )
+    ).cuda()
 
     encoder = Encoder(num_embeddings, embedding_dim,
                       bank_k, bank_ck, proj_dims, highway_layers,
-                      highway_units, gru_units)
+                      highway_units, gru_units).cuda()
 
     output = encoder(input)
     assert output.size() == (batch_size, max_length, 2 * gru_units)
