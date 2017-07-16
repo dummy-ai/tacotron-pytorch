@@ -6,6 +6,7 @@ import numpy as np
 from modules.melscale import melscale
 from modules.path import root_path
 from utils import ProgressBar
+import pickle 
 
 # create Datasets type
 Datasets = collections.namedtuple('Datasets', ['train', 'validation', 'test'])
@@ -113,7 +114,8 @@ class DataSet:
 
         bar = ProgressBar(len(self._audio_files) - 1, unit='')
         for (audio_files_read, audio_file) in enumerate(self._audio_files):
-            mel_spectro = melscale(audio_file)
+            with open(audio_file, "rb") as f:
+               mel_spectro = pickle.load(f)
             padded_mel_spectro = pad_time_dim(
                 mel_spectro, self._max_audio_length, 0)
             self._spectros.append(padded_mel_spectro.transpose())
@@ -141,7 +143,7 @@ class DataSet:
         return self._spectros[start:end], self._indexed_texts[start:end]
 
 def tiny_words(max_text_length=20, max_audio_length=30, max_dataset_size=sys.maxsize):
-    data_path = os.path.join('/mnt/nfs/dataset/tts/tiny-words-v0')
+    data_path = os.path.join('/mnt/nfs/dataset.tmp/tts/tiny-words-v0/')
     meta_list = json.load(
         open(os.path.join(data_path, 'meta.json'), 'r'))
     texts = [x['text'] for x in meta_list]
