@@ -21,15 +21,13 @@ parser.add_argument("--max-epochs", type=int, default=100000)
 parser.add_argument('--use-cuda', dest='use_cuda', action='store_true')
 parser.set_defaults(use_cuda=False)
 parser.add_argument('-d', '--data-size', default=sys.maxsize, type=int)
-parser.add_argument('--dropout', default=0.5, type=float, help='Dropout ratio for prenet')
+parser.add_argument('--dropout', default=0.5, type=float)
 
 
 def train_single_batch(input_variable, target_variable,
-    encoder, decoder,
-    encoder_optimizer, decoder_optimizer, criterion,
-    teacher_forcing_ratio = 0.5,
-    clip = 5.0,
-    use_cuda=False):
+                       encoder, decoder, encoder_optimizer, decoder_optimizer,
+                       criterion, teacher_forcing_ratio=0.5,
+                       clip=5.0, use_cuda=False):
     """
     Args:
         input_variable: A Tensor of size (batch_size, max_text_length)
@@ -68,22 +66,22 @@ def train_single_batch(input_variable, target_variable,
             decoder_output, attn_gru_hidden, decoder_gru_hiddens, attn_weights = \
                 decoder(decoder_input, attn_gru_hidden, decoder_gru_hiddens, encoder_outputs)
             predict_frames = decoder_output.view(
-                batch_size, decoder.num_frames, decoder.frame_size).clone()
+                batch_size, decoder.num_frames, decoder.frame_size)
             truth_frames = \
                 target_variable[:, decoder.num_frames * t:decoder.num_frames * (t+1), :].clone()
             loss += criterion(predict_frames, truth_frames)
             # use truth
-            decoder_input = target_variable[:, decoder.num_frames * (t+1) - 1, :].contiguous().clone()
+            decoder_input = target_variable[:, decoder.num_frames * (t+1) - 1, :].contiguous()
 
     else:
-        # Without teacher forcing: use network's own prediction as the next input
+        # Without teacher forcing: use network's prediction as the next input
         for t in range(int(target_length / decoder.num_frames)):
             decoder_output, attn_gru_hidden, decoder_gru_hiddens, attn_weights = \
                 decoder(decoder_input, attn_gru_hidden, decoder_gru_hiddens, encoder_outputs)
             predict_frames = decoder_output.view(
-                batch_size, decoder.num_frames, decoder.frame_size).clone()
+                batch_size, decoder.num_frames, decoder.frame_size)
             truth_frames = \
-                target_variable[:, decoder.num_frames * t:decoder.num_frames * (t+1), :].clone()
+                target_variable[:, decoder.num_frames * t:decoder.num_frames * (t+1), :]
             loss += criterion(predict_frames, truth_frames)
             # use predict
             decoder_input = predict_frames[:, -1, :].contiguous().clone()
@@ -97,10 +95,12 @@ def train_single_batch(input_variable, target_variable,
 
     return loss.data[0] / target_length
 
+
 def as_minutes(s):
     m = math.floor(s / 60)
     s -= m * 60
     return '%dm %ds' % (m, s)
+
 
 def time_since(since, percent):
     now = time.time()
@@ -108,6 +108,7 @@ def time_since(since, percent):
     es = s / (percent)
     rs = es - s
     return '%s (- %s)' % (as_minutes(s), as_minutes(rs))
+
 
 def train(args):
     # initalize dataset
@@ -123,18 +124,24 @@ def train(args):
         highway_layers = 4
         highway_units = 128
         gru_units = 128
-        encoder = Encoder(ds.lang.num_chars, embedding_dim,
+        encoder = Encoder(
+            ds.lang.num_chars, embedding_dim,
             bank_k, bank_ck, proj_dims, highway_layers,
-            highway_units, gru_units, dropout=args.dropout)
+            highway_units, gru_units, dropout=args.dropout
+        )
 
-        decoder = AttnDecoder(ds.max_text_length, use_cuda=args.use_cuda)
+        decoder = AttnDecoder(
+            ds.max_text_length,
+            use_cuda=args.use_cuda,
+            dropout=args.dropout
+        )
 
         if args.use_cuda:
             encoder.cuda()
             decoder.cuda()
 
         # initialize optimizers and criterion
-        learning_rate = 1e-1
+        learning_rate = 1e-3
         encoder_optimizer = optim.Adam(encoder.parameters(), lr=learning_rate)
         decoder_optimizer = optim.Adam(decoder.parameters(), lr=learning_rate)
         criterion = nn.L1Loss()
@@ -148,8 +155,8 @@ def train(args):
         # Keep track of time elapsed and running averages
         start = time.time()
         plot_losses = []
-        print_loss_total = 0 # Reset every print_every
-        plot_loss_total = 0 # Reset every plot_every
+        print_loss_total = 0  # Reset every print_every
+        plot_loss_total = 0  # Reset every plot_every
 
     for epoch in range(1, n_epochs + 1):
 
@@ -162,10 +169,10 @@ def train(args):
             input_variable = input_variable.cuda()
             target_variable = target_variable.cuda()
 
-
         # train single batch
-        loss = train_single_batch(input_variable,
-            target_variable, encoder, decoder,
+        loss = train_single_batch(
+            input_variable, target_variable,
+            encoder, decoder,
             encoder_optimizer, decoder_optimizer,
             criterion, use_cuda=args.use_cuda)
 
@@ -173,18 +180,22 @@ def train(args):
         print_loss_total += loss
         plot_loss_total += loss
 
-        if epoch == 0: continue
+        if epoch == 0:
+            continue
 
         if epoch % print_every == 0:
             print_loss_avg = print_loss_total / print_every
             print_loss_total = 0
-            print_summary = '%s (%d %d%%) %.4f' % (time_since(start, epoch / n_epochs), epoch, epoch / n_epochs * 100, print_loss_avg)
+            print_summary = '%s (%d %d%%) %.4f' % \
+                (time_since(start, epoch / n_epochs),
+                 epoch, epoch / n_epochs * 100, print_loss_avg)
             print(print_summary)
 
         if epoch % plot_every == 0:
             plot_loss_avg = plot_loss_total / plot_every
             plot_losses.append(plot_loss_avg)
             plot_loss_total = 0
+
 
 def main():
     args = parser.parse_args()
@@ -198,4 +209,3 @@ def main():
 
 if __name__ == "__main__":
     exit(main())
-
