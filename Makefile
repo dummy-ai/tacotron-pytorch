@@ -12,3 +12,4 @@ base-conda:
 	curl https://repo.continuum.io/archive/Anaconda3-4.4.0-Linux-x86_64.sh > /tmp/Anaconda3-4.4.0-Linux-x86_64.sh
 	bash /tmp/Anaconda3-4.4.0-Linux-x86_64.sh
 	conda install pytorch torchvision cuda80 -c soumith
+	sudo apt-get install libav-tools
