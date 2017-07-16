@@ -1,5 +1,5 @@
 SERVER_KEY='/Users/tims/.ssh/terraform'
-SERVER_IP='104.196.105.30'
+SERVER_IP='35.190.139.8'
 SERVER_USER='core'
 
 sync:

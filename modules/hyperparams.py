@@ -1,7 +1,7 @@
 class Hyperparams:
     # data
     max_text_length = 20
-    max_audio_length = 60
+    max_audio_length = 100
 
     # spectral analysis
     sr = 24000
@@ -28,7 +28,7 @@ class Hyperparams:
     attn_gru_hidden_size = 256
     decoder_gru_hidden_size = 256
     decoder_gru_layers = 2
-    rf = 3  # reduction factor: 2, 3, 5 are used in paper
+    rf = 5  # reduction factor: 2, 3, 5 are used in paper
 
     # model/post
     post_bank_k = 8
