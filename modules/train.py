@@ -172,14 +172,12 @@ def train(args):
         criterion = nn.L1Loss()
 
         # configuring traingin
-        plot_every = 200
         print_every = 100
+        save_every = 1000
 
         # Keep track of time elapsed and running averages
         start = time.time()
-        plot_losses = []
         print_loss_total = 0  # Reset every print_every
-        plot_loss_total = 0  # Reset every plot_every
 
     for epoch in range(1, hp.n_epochs + 1):
 
@@ -203,7 +201,6 @@ def train(args):
 
         # Keep track of loss
         print_loss_total += loss
-        plot_loss_total += loss
 
         if epoch == 0:
             continue
@@ -216,10 +213,18 @@ def train(args):
                  epoch, epoch / hp.n_epochs * 100, print_loss_avg)
             print(print_summary)
 
-        if epoch % plot_every == 0:
-            plot_loss_avg = plot_loss_total / plot_every
-            plot_losses.append(plot_loss_avg)
-            plot_loss_total = 0
+        if epoch % save_every == 0:
+            save_checkpoint({
+                'epoch': epoch + 1,
+                'encoder': encoder.state_dict(),
+                'decoder': decoder.state_dict(),
+                'postnet': postnet.state_dict(),
+                'optimizer': optimizer.state_dict(),
+            })
+
+
+def save_checkpoint(state, filename="tacotron.checkpoint"):
+    torch.save(state, filename)
 
 
 def main():
