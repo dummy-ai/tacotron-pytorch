@@ -1,7 +1,7 @@
 # Given an input wav file and an output prefix, store the melscale transform to a new binary file.
 
 import pickle
-from melscale import melscale
+import audio_signal
 import sys
 import os
 import argparse
@@ -15,7 +15,7 @@ def main():
     args = parser.parse_args()
     audio_file = args.wav_file
     output_prefix = args.output_prefix
-    S = melscale(audio_file)
+    S = audio_signal.compute_spectrograms(audio_file)
     output_path = os.path.join(output_prefix, os.path.split(audio_file)[-1] + '.mel')
     with open(output_path, "wb") as f:
       pickle.dump(S, f)
