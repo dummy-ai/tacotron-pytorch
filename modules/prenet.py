@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from modules.commons import SeqLinear
 
+
 class PreNet(nn.Module):
 
     def __init__(self, input_size, fc1_hidden_size=256, fc2_hidden_size=128,
@@ -37,5 +38,3 @@ class PreNet(nn.Module):
         """
         out1 = self.dropout(F.relu(self.fc1(x)))
         return self.dropout(F.relu(self.fc2(out1)))
-
-

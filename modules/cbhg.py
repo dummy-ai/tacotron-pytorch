@@ -8,8 +8,9 @@ from modules.highway import HighwayNet
 
 class CBHG(nn.Module):
 
-    def __init__(self, in_channels, bank_k, bank_ck, proj_dims,
-                 highway_layers, highway_units, gru_units, gru_layers=1):
+    def __init__(self, in_channels, bank_k, bank_ck,
+                 proj_dims, highway_layers, highway_units,
+                 gru_units, use_cuda=False, gru_layers=1):
         super(CBHG, self).__init__()
         """
         Args:
@@ -26,6 +27,7 @@ class CBHG(nn.Module):
         self._highway_units = highway_units
         self._gru_units = gru_units
         self._gru_layers = gru_layers
+        self.use_cuda = use_cuda
 
         self.convbank = Conv1dBankWithMaxPool(in_channels, bank_k, bank_ck)
         proj_in_channels = bank_k * bank_ck
@@ -90,9 +92,10 @@ class CBHG(nn.Module):
         rnn_inputs = torch.transpose(highway_out, 1, 2).contiguous()
 
         batch_size = x.size()[0]
-        # TODO init_hidden
         h0 = Variable(torch.randn(self.gru_layers * 2,
                                   batch_size,
-                                  self.gru_units)).cuda()
+                                  self.gru_units))
+        if self.use_cuda:
+            h0 = h0.cuda()
         final_output, _ = self.gru(rnn_inputs, h0)
         return final_output

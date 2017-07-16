@@ -11,7 +11,9 @@ from torch import optim
 from torch.autograd import Variable
 from modules.decoder import AttnDecoder
 from modules.encoder import Encoder
+from modules.postnet import PostNet
 from modules.dataset import tiny_words
+from modules.hyperparams import Hyperparams as hp
 from utils import Timed
 
 
@@ -21,79 +23,83 @@ parser.add_argument("--max-epochs", type=int, default=100000)
 parser.add_argument('--use-cuda', dest='use_cuda', action='store_true')
 parser.set_defaults(use_cuda=False)
 parser.add_argument('-d', '--data-size', default=sys.maxsize, type=int)
-parser.add_argument('--dropout', default=0.5, type=float)
 
 
-def train_single_batch(input_variable, target_variable,
-                       encoder, decoder, encoder_optimizer, decoder_optimizer,
-                       criterion, teacher_forcing_ratio=0.5,
-                       clip=5.0, use_cuda=False):
+def train_batch(mels_v, mags_v, texts_v,
+                encoder, decoder, postnet,
+                optimizer, criterion, clip=5.0):
     """
     Args:
-        input_variable: A Tensor of size (batch_size, max_text_length)
-        target_variable: A Tensor of size
+        texts_v: A Tensor of size (batch_size, max_text_length)
+        mels_v: A Tensor of size
             (batch_size, max_audio_length, frame_size)
+        mags_v: A Tensor of size (batch_size, max_audio_length, ???)
     """
 
-    # zero gradients of both optimizers
-    encoder_optimizer.zero_grad()
-    decoder_optimizer.zero_grad()
+    # zero gradients
+    optimizer.zero_grad()
     # added onto for each frame
     loss = 0
 
     # get batch size and initialize GO_frame
-    batch_size = input_variable.size()[0]
-    GO_frame = np.zeros((batch_size, decoder.frame_size))
+    GO_frame = np.zeros((hp.batch_size, hp.n_mels))
 
     # get target length
-    target_length = target_variable.size()[1]
+    T = hp.max_audio_length
 
-    # Run words through encoder
-    encoder_outputs = encoder(input_variable)
+    # encoder
+    encoder_out = encoder(texts_v)
 
     # Prepare input and output variables
-    decoder_input = Variable(torch.from_numpy(GO_frame).float())
-    if use_cuda:
-        decoder_input = decoder_input.cuda()
-    attn_gru_hidden, decoder_gru_hiddens = decoder.init_hiddens(batch_size)
+    decoder_in = Variable(torch.from_numpy(GO_frame).float())
+    if hp.use_cuda:
+        decoder_in = decoder_in.cuda()
+    h, hs = decoder.init_hiddens(hp.batch_size)
 
     # Choose whether to use teacher forcing
-    use_teacher_forcing = random.random() < teacher_forcing_ratio
+    use_teacher_forcing = random.random() < hp.teacher_forcing_ratio
+    decoder_outs = []
     if use_teacher_forcing:
 
         # Teacher forcing: Use the ground-truth target as the next input
-        for t in range(int(target_length / decoder.num_frames)):
-            decoder_output, attn_gru_hidden, decoder_gru_hiddens, attn_weights = \
-                decoder(decoder_input, attn_gru_hidden, decoder_gru_hiddens, encoder_outputs)
-            predict_frames = decoder_output.view(
-                batch_size, decoder.num_frames, decoder.frame_size)
-            truth_frames = \
-                target_variable[:, decoder.num_frames * t:decoder.num_frames * (t+1), :].clone()
-            loss += criterion(predict_frames, truth_frames)
+        for t in range(int(T / hp.rf)):
+            # decoder
+            # decoder_out: (batch_size, hp.rf, hp.n_mels)
+            decoder_out, h, hs, _ = decoder(decoder_in, h, hs, encoder_out)
+            decoder_outs.append(decoder_out)
+
+            mel_truth = mels_v[:, hp.rf*t: hp.rf*(t+1), :]
+            loss += criterion(decoder_out, mel_truth)
             # use truth
-            decoder_input = target_variable[:, decoder.num_frames * (t+1) - 1, :].contiguous()
+            decoder_in = mels_v[:, hp.rf*(t+1)-1, :].contiguous()
 
     else:
         # Without teacher forcing: use network's prediction as the next input
-        for t in range(int(target_length / decoder.num_frames)):
-            decoder_output, attn_gru_hidden, decoder_gru_hiddens, attn_weights = \
-                decoder(decoder_input, attn_gru_hidden, decoder_gru_hiddens, encoder_outputs)
-            predict_frames = decoder_output.view(
-                batch_size, decoder.num_frames, decoder.frame_size)
-            truth_frames = \
-                target_variable[:, decoder.num_frames * t:decoder.num_frames * (t+1), :]
-            loss += criterion(predict_frames, truth_frames)
+        for t in range(int(T / hp.rf)):
+            # decoder
+            # decoder_out: (batch_size, hp.rf, hp.n_mels)
+            decoder_out, h, hs, _ = decoder(decoder_in, h, hs, encoder_out)
+            decoder_outs.append(decoder_out)
+
+            mel_truth = mels_v[:, hp.rf*t: hp.rf*(t+1), :]
+            loss += criterion(decoder_out, mel_truth)
             # use predict
-            decoder_input = predict_frames[:, -1, :].contiguous().clone()
+            decoder_in = decoder_out[:, -1, :].contiguous()
+
+    # (batch_size, T, n_mels)
+    decoder_outs = torch.cat(decoder_outs, 1)
+
+    # postnet
+    post_out = postnet(decoder_outs)
+    loss += criterion(post_out, mags_v)
 
     # Backpropagation
     loss.backward()
     torch.nn.utils.clip_grad_norm(encoder.parameters(), clip)
     torch.nn.utils.clip_grad_norm(decoder.parameters(), clip)
-    encoder_optimizer.step()
-    decoder_optimizer.step()
+    optimizer.step()
 
-    return loss.data[0] / target_length
+    return loss.data[0] / T
 
 
 def as_minutes(s):
@@ -113,44 +119,48 @@ def time_since(since, percent):
 def train(args):
     # initalize dataset
     with Timed('Loading dataset'):
-        ds = tiny_words(max_dataset_size=args.data_size)
+        ds = tiny_words(
+            max_text_length=hp.max_text_length,
+            max_audio_length=hp.max_audio_length,
+            max_dataset_size=args.data_size
+        )
 
     # initialize model
     with Timed('Initializing model.'):
-        embedding_dim = 256
-        bank_k = 16
-        bank_ck = 128
-        proj_dims = (128, 128)
-        highway_layers = 4
-        highway_units = 128
-        gru_units = 128
         encoder = Encoder(
-            ds.lang.num_chars, embedding_dim,
-            bank_k, bank_ck, proj_dims, highway_layers,
-            highway_units, gru_units, dropout=args.dropout
+            ds.lang.num_chars, hp.embedding_dim, hp.encoder_bank_k,
+            hp.encoder_bank_ck, hp.encoder_proj_dims,
+            hp.encoder_highway_layers, hp.encoder_highway_units,
+            hp.encoder_gru_units, dropout=hp.dropout, use_cuda=hp.use_cuda
         )
 
         decoder = AttnDecoder(
-            ds.max_text_length,
-            use_cuda=args.use_cuda,
-            dropout=args.dropout
+            hp.max_text_length, hp.attn_gru_hidden_size, hp.n_mels,
+            hp.rf, hp.decoder_gru_hidden_size,
+            hp.decoder_gru_layers,
+            dropout=hp.dropout, use_cuda=hp.use_cuda
         )
 
-        if args.use_cuda:
+        postnet = PostNet(
+            hp.n_mels, 1 + hp.n_fft//2,
+            hp.post_bank_k, hp.post_bank_ck,
+            hp.post_proj_dims, hp.post_highway_layers, hp.post_highway_units,
+            hp.post_gru_units, use_cuda=hp.use_cuda
+        )
+
+        if hp.use_cuda:
             encoder.cuda()
             decoder.cuda()
+            postnet.cuda()
 
         # initialize optimizers and criterion
-        learning_rate = 1e-3
-        encoder_optimizer = optim.Adam(encoder.parameters(), lr=learning_rate)
-        decoder_optimizer = optim.Adam(decoder.parameters(), lr=learning_rate)
+        all_paramters = list(encoder.parameters()) + list(decoder.parameters())
+        optimizer = optim.Adam(all_paramters, lr=hp.lr)
         criterion = nn.L1Loss()
 
         # configuring traingin
-        n_epochs = args.max_epochs
         plot_every = 200
         print_every = 100
-        batch_size = 32
 
         # Keep track of time elapsed and running averages
         start = time.time()
@@ -158,23 +168,25 @@ def train(args):
         print_loss_total = 0  # Reset every print_every
         plot_loss_total = 0  # Reset every plot_every
 
-    for epoch in range(1, n_epochs + 1):
+    for epoch in range(1, hp.n_epochs + 1):
 
         # get training data for this cycle
-        spectros, indexed_texts = ds.next_batch(batch_size)
-        input_variable = Variable(torch.from_numpy(indexed_texts))
-        target_variable = Variable(torch.from_numpy(spectros).float())
+        mels, mags, indexed_texts = ds.next_batch(hp.batch_size)
 
-        if args.use_cuda:
-            input_variable = input_variable.cuda()
-            target_variable = target_variable.cuda()
+        mels_v = Variable(torch.from_numpy(mels).float())
+        mags_v = Variable(torch.from_numpy(mags).float())
+        texts_v = Variable(torch.from_numpy(indexed_texts))
 
-        # train single batch
-        loss = train_single_batch(
-            input_variable, target_variable,
-            encoder, decoder,
-            encoder_optimizer, decoder_optimizer,
-            criterion, use_cuda=args.use_cuda)
+        if hp.use_cuda:
+            mels_v = mels_v.cuda()
+            mags_v = mags_v.cuda()
+            texts_v = texts_v.cuda()
+
+        loss = train_batch(
+            mels_v, mags_v, texts_v,
+            encoder, decoder, postnet,
+            optimizer, criterion
+        )
 
         # Keep track of loss
         print_loss_total += loss
@@ -187,8 +199,8 @@ def train(args):
             print_loss_avg = print_loss_total / print_every
             print_loss_total = 0
             print_summary = '%s (%d %d%%) %.4f' % \
-                (time_since(start, epoch / n_epochs),
-                 epoch, epoch / n_epochs * 100, print_loss_avg)
+                (time_since(start, epoch / hp.n_epochs),
+                 epoch, epoch / hp.n_epochs * 100, print_loss_avg)
             print(print_summary)
 
         if epoch % plot_every == 0:
