@@ -1,7 +1,7 @@
 class Hyperparams:
     # data
     max_text_length = 20
-    max_audio_length = 60
+    max_audio_length = 105
 
     # spectral analysis
     sr = 24000
