@@ -10,10 +10,10 @@ from modules.prenet import PreNet
 class AttnDecoder(nn.Module):
 
     def __init__(self, max_text_length,
-                 attn_gru_hidden_size,
-                 frame_size, num_frames,
-                 decoder_gru_hidden_size,
-                 decoder_gru_layers,
+                 attn_gru_hidden_size=256,
+                 frame_size=80, num_frames=3,
+                 decoder_gru_hidden_size=256,
+                 decoder_gru_layers=2,
                  dropout=0.5,
                  use_cuda=False):
         super(AttnDecoder, self).__init__()
