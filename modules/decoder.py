@@ -21,7 +21,6 @@ class AttnDecoder(nn.Module):
         self.frame_size = frame_size
         self.num_frames = num_frames
         self.decoder_gru_hidden_size = decoder_gru_hidden_size
-        self.decoder_output_size = frame_size * num_frames
         self.decoder_gru_layers = decoder_gru_layers
         self.max_text_length = max_text_length
         self.use_cuda = use_cuda
@@ -66,7 +65,7 @@ class AttnDecoder(nn.Module):
         )
 
         self.out = nn.Linear(self.decoder_gru_hidden_size,
-                             self.decoder_output_size)
+                             num_frames * frame_size)
 
     def forward(self, input, attn_gru_hidden,
                 decoder_gru_hiddens, encoder_outputs):
@@ -85,7 +84,7 @@ class AttnDecoder(nn.Module):
                 2 * encoder_hidden_size = attn_gru_hidden_size
 
         Returns:
-            output: A Tensor of size (batch_size, decoder_output_size)
+            output: A Tensor of size (batch_size, num_frames, frame_size)
             attn_gru_hidden: See above
             decoder_gru_hiddens: See above
             a: Attention weights, a Tensor of size (batch_size, max_text_length)
@@ -137,8 +136,10 @@ class AttnDecoder(nn.Module):
             new_decoder_gru_hiddens.append(decoder_hidden)
             decoder_output = decoder_output + F.relu(decoder_hidden)
 
-        output = self.out(decoder_output)
-        return self.out(decoder_output), new_attn_gru_hidden, new_decoder_gru_hiddens, a
+        output = self.out(decoder_output).view(
+            batch_size, self.num_frames, self.frame_size)
+
+        return output, new_attn_gru_hidden, new_decoder_gru_hiddens, a
 
     def init_hiddens(self, batch_size):
         attn_gru_hidden = Variable(torch.zeros(batch_size,
