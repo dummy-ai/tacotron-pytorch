@@ -92,7 +92,7 @@ class AttnDecoder(nn.Module):
         batch_size = input.size()[0]
         pre_out = self.prenet(
             input.view(batch_size, 1, self.frame_size)
-        ).squeeze()
+        ).squeeze(1)
 
         # run attn gru for one step
         # attn_output has size (batch_size, self.attn_gru_hidden_size)
@@ -126,7 +126,7 @@ class AttnDecoder(nn.Module):
 
         # decoder_input has size (batch_size, self.attn_gru_hidden_size)
         decoder_input = self.attn_combine(
-            torch.cat((attn_output, dtp.squeeze()), 1))
+            torch.cat((attn_output, dtp.squeeze(1)), 1))
         decoder_output = decoder_input
 
         new_decoder_gru_hiddens = []
