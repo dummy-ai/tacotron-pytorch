@@ -13,3 +13,6 @@ base-conda:
 	bash /tmp/Anaconda3-4.4.0-Linux-x86_64.sh
 	conda install pytorch torchvision cuda80 -c soumith
 	sudo apt-get install libav-tools
+
+download:
+	scp -r -i $(SERVER_KEY) $(SERVER_USER)@$(SERVER_IP):~/tacotron/demo.wav ./

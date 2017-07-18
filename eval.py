@@ -7,7 +7,7 @@ from modules.decoder import AttnDecoder
 from modules.encoder import Encoder
 from modules.postnet import PostNet
 from modules.dataset import tiny_words, indexes_from_text, pad_indexes
-from audio_signal import spectrogram2wav, griffinlim
+from modules.audio_signal import spectrogram2wav, griffinlim
 from modules.hyperparams import Hyperparams as hp
 from scipy.io.wavfile import write
 

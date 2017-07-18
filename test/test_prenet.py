@@ -10,8 +10,8 @@ def test_prenet():
 	input_size = 80
 	input = Variable(torch.randn(batch_size, 1, input_size))
 
-	prenet = PreNet(input_size, 
-					fc1_hidden_size=fc1_hidden_size, 
+	prenet = PreNet(input_size,
+					fc1_hidden_size=fc1_hidden_size,
 					fc2_hidden_size=fc2_hidden_size)
 	output = prenet(input)
 
