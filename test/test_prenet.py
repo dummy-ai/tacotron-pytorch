@@ -47,7 +47,8 @@ def test_prenet_batch():
 
     prenet1 = PreNet(embedding_size,
                      fc1_hidden_size=fc1_hidden_size,
-                     fc2_hidden_size=fc2_hidden_size)
+                     fc2_hidden_size=fc2_hidden_size,
+                     dropout=0.)
 
     output1_single = prenet1(input1_single).data.numpy()
     output1_batch = prenet1(input1_batch).data.numpy()
