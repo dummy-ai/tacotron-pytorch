@@ -20,14 +20,15 @@ from utils import Timed
 parser = argparse.ArgumentParser(
     description="Train an Tacotron model for speech synthesis")
 parser.add_argument("--max-epochs", type=int, default=100000)
-parser.add_argument('--use-cuda', dest='use_cuda', action='store_true')
-parser.set_defaults(use_cuda=False)
+parser.add_argument('--multi-gpus', dest='multi_gpus', action='store_true')
+parser.set_defaults(multi_gpus=False)
 parser.add_argument('-d', '--data-size', default=sys.maxsize, type=int)
 
 
 def train_batch(mels_v, mags_v, texts_v,
                 encoder, decoder, postnet,
-                optimizer, criterion, clip=5.0):
+                optimizer, criterion,
+                multi_gpus=False, clip=5.0):
     """
     Args:
         texts_v: A Tensor of size (batch_size, max_text_length)
@@ -54,7 +55,11 @@ def train_batch(mels_v, mags_v, texts_v,
     decoder_in = Variable(torch.from_numpy(GO_frame).float())
     if hp.use_cuda:
         decoder_in = decoder_in.cuda()
-    h, hs = decoder.init_hiddens(hp.batch_size)
+
+    if multi_gpus:
+        h, hs = decoder.module.init_hiddens(hp.batch_size)
+    else:
+        h, hs = decoder.init_hiddens(hp.batch_size)
 
     # Choose whether to use teacher forcing
     use_teacher_forcing = random.random() < hp.teacher_forcing_ratio
@@ -148,25 +153,31 @@ def train(args):
             hp.post_gru_units, use_cuda=hp.use_cuda
         )
 
+        if args.multi_gpus:
+            all_devices = list(range(torch.cuda.device_count()))
+            encoder = nn.DataParallel(encoder, device_ids=all_devices)
+            decoder = nn.DataParallel(decoder, device_ids=all_devices)
+            postnet = nn.DataParallel(postnet, device_ids=all_devices)
+
         if hp.use_cuda:
             encoder.cuda()
             decoder.cuda()
             postnet.cuda()
 
         # initialize optimizers and criterion
-        all_paramters = list(encoder.parameters()) + list(decoder.parameters())
+        all_paramters = (list(encoder.parameters()) +
+                         list(decoder.parameters()) +
+                         list(postnet.parameters()))
         optimizer = optim.Adam(all_paramters, lr=hp.lr)
         criterion = nn.L1Loss()
 
         # configuring traingin
-        plot_every = 200
         print_every = 100
+        save_every = 1000
 
         # Keep track of time elapsed and running averages
         start = time.time()
-        plot_losses = []
         print_loss_total = 0  # Reset every print_every
-        plot_loss_total = 0  # Reset every plot_every
 
     for epoch in range(1, hp.n_epochs + 1):
 
@@ -185,12 +196,11 @@ def train(args):
         loss = train_batch(
             mels_v, mags_v, texts_v,
             encoder, decoder, postnet,
-            optimizer, criterion
+            optimizer, criterion, multi_gpus=args.multi_gpus
         )
 
         # Keep track of loss
         print_loss_total += loss
-        plot_loss_total += loss
 
         if epoch == 0:
             continue
@@ -203,10 +213,18 @@ def train(args):
                  epoch, epoch / hp.n_epochs * 100, print_loss_avg)
             print(print_summary)
 
-        if epoch % plot_every == 0:
-            plot_loss_avg = plot_loss_total / plot_every
-            plot_losses.append(plot_loss_avg)
-            plot_loss_total = 0
+        if epoch % save_every == 0:
+            save_checkpoint({
+                'epoch': epoch + 1,
+                'encoder': encoder.state_dict(),
+                'decoder': decoder.state_dict(),
+                'postnet': postnet.state_dict(),
+                'optimizer': optimizer.state_dict(),
+            })
+
+
+def save_checkpoint(state, filename="tacotron.checkpoint"):
+    torch.save(state, filename)
 
 
 def main():

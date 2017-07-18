@@ -1,9 +1,11 @@
 import sys
+import copy
 import librosa
 import librosa.display
 import numpy as np
 import matplotlib.pyplot as plt
 from modules.hyperparams import Hyperparams as hp
+from utils import ProgressBar
 
 
 # credits: https://github.com/Kyubyong/tacotron/blob/master/utils.py
@@ -46,6 +48,49 @@ def compute_spectrograms(audio_file):
 
 def emphasize(signal):
     return np.append(signal[0], signal[1:] - hp.pre_emphasis * signal[:-1])
+
+
+def spectrogram2wav(spectrogram):
+    '''
+    spectrogram: [t, f], i.e. [t, nfft // 2 + 1]
+    '''
+    spectrogram = spectrogram.T  # [f, t]
+    X_best = copy.deepcopy(spectrogram)  # [f, t]
+    bar = ProgressBar(hp.n_iter, unit='')
+    for i in range(hp.n_iter):
+        bar.update(i)
+        X_t = invert_spectrogram(X_best)
+        est = librosa.stft(
+            X_t, hp.n_fft, hp.hop_length, win_length=hp.win_length)  # [f, t]
+        phase = est / np.maximum(1e-8, np.abs(est))  # [f, t]
+        X_best = spectrogram * phase  # [f, t]
+    X_t = invert_spectrogram(X_best)
+
+    return np.real(X_t)
+
+
+def invert_spectrogram(spectrogram):
+    '''
+    spectrogram: [f, t]
+    '''
+    return librosa.istft(spectrogram, hp.hop_length,
+                         win_length=hp.win_length, window="hann")
+
+
+def griffinlim(spectrogram, n_iter=hp.n_iter, window='hann',
+               n_fft=2048, hop_length=hp.hop_length):
+    angles = np.exp(2j * np.pi * np.random.rand(*spectrogram.shape))
+
+    for i in range(hp.n_iter):
+        full = np.abs(spectrogram).astype(np.complex) * angles
+        inverse = librosa.istft(full, hop_length=hop_length, window=window)
+        rebuilt = librosa.stft(inverse, n_fft=n_fft, hop_length=hop_length, window=window)
+        angles = np.exp(1j * np.angle(rebuilt))
+
+    full = np.abs(spectrogram).astype(np.complex) * angles
+    inverse = librosa.istft(full, hop_length=hop_length, window=window)
+
+    return np.real(inverse)
 
 
 def usage(cmd):
