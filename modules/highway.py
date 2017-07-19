@@ -56,7 +56,7 @@ class HighwayNet(nn.Module):
             x = self.pre_fc(x)
         for i in range(self.num_layers):
             h = F.relu(self.Hs[i](x))
-            t = F.softmax(self.Ts[i](x))
+            t = F.sigmoid(self.Ts[i](x))
             out = h * t + x * (1-t)
             x = out
         return out
