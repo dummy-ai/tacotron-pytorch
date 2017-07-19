@@ -111,7 +111,6 @@ def train(args):
         mels, mags, indexed_texts = ds.next_batch(hp.batch_size)
 
         mels_v = Variable(torch.from_numpy(mels).float())
-        import pdb; pdb.set_trace();
         mags_v = Variable(torch.from_numpy(mags).float())
         texts_v = Variable(torch.from_numpy(indexed_texts))
 

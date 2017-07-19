@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import argparse
+import sys
 import numpy as np
 from torch.autograd import Variable
 from modules.decoder import AttnDecoder
@@ -16,16 +17,21 @@ PAD_token = 1
 
 parser = argparse.ArgumentParser(
     description="Generate wav based on given text")
-parser.add_argument("checkpoint", type=str)
-parser.add_argument("text", type=str)
+parser.add_argument("--checkpoint", type=str, default="tacotron.checkpoint")
+parser.add_argument("--text", type=str, default="hello")
+parser.add_argument('-d', '--data-size', default=sys.maxsize, type=int)
+args = parser.parse_args()
 
+hp.use_cuda = False
 
 def inference(checkpoint_file, text):
     ds = tiny_words(
         max_text_length=hp.max_text_length,
         max_audio_length=hp.max_audio_length,
-        max_dataset_size=128
+        max_dataset_size=args.data_size
     )
+
+    print(ds.texts)
 
     # prepare input
     indexes = indexes_from_text(ds.lang, text)
@@ -104,7 +110,6 @@ def inference(checkpoint_file, text):
 
 
 def main():
-    args = parser.parse_args()
     inference(args.checkpoint, args.text)
 
 
