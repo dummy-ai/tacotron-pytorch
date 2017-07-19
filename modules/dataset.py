@@ -157,9 +157,11 @@ class DataSet:
                 self._indexed_texts[start:end])
 
 
+TINY_WORDS = '/mnt/nfs/dataset/tts/tiny-words-v0'
+
 def tiny_words(max_text_length=20, max_audio_length=60,
                max_dataset_size=sys.maxsize):
-    data_path = os.path.join('/mnt/nfs/dataset/tts/tiny-words-v0')
+    data_path = os.path.join(TINY_WORDS)
     meta_list = json.load(
         open(os.path.join(data_path, 'meta.json'), 'r'))
     texts = [x['text'] for x in meta_list]
@@ -170,7 +172,21 @@ def tiny_words(max_text_length=20, max_audio_length=60,
 
     return DataSet(texts, audios,
                    max_text_length=max_text_length,
-                   max_audio_length=max_audio_length)
+                   max_audio_length=max_audio_length,
+                   preprocess=preprocess)
+
+
+def make_lang(data_path, max_dataset_size=sys.maxsize):
+    meta_list = json.load(
+        open(os.path.join(data_path, 'meta.json'), 'r'))
+    texts = [x['text'] for x in meta_list]
+    texts = texts[:max_dataset_size]
+    lang = Lang()
+    for text in texts:
+        lang.index_text(text)
+    print(texts)
+    return lang
+
 
 
 def main():

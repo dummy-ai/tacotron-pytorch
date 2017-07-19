@@ -102,6 +102,7 @@ def train_batch(mels_v, mags_v, texts_v,
     loss.backward()
     torch.nn.utils.clip_grad_norm(encoder.parameters(), clip)
     torch.nn.utils.clip_grad_norm(decoder.parameters(), clip)
+    torch.nn.utils.clip_grad_norm(postnet.parameters(), clip)
     optimizer.step()
 
     return loss.data[0] / T

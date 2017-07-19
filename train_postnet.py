@@ -89,8 +89,7 @@ def train(args):
             all_devices = list(range(torch.cuda.device_count()))
             postnet = nn.DataParallel(postnet, device_ids=all_devices)
 
-        if hp.use_cuda:
-            postnet.cuda()
+        if hp.use_cuda: postnet.cuda()
 
         # initialize optimizers and criterion
         all_paramters = (list(postnet.parameters()))

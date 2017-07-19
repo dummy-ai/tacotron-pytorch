@@ -7,7 +7,7 @@ from torch.autograd import Variable
 from modules.decoder import AttnDecoder
 from modules.encoder import Encoder
 from modules.postnet import PostNet
-from modules.dataset import tiny_words, indexes_from_text, pad_indexes
+from modules.dataset import make_lang, TINY_WORDS, indexes_from_text, pad_indexes
 from modules.audio_signal import spectrogram2wav, griffinlim
 from modules.hyperparams import Hyperparams as hp
 from scipy.io.wavfile import write
@@ -22,19 +22,14 @@ parser.add_argument("--text", type=str, default="hello")
 parser.add_argument('-d', '--data-size', default=sys.maxsize, type=int)
 args = parser.parse_args()
 
-hp.use_cuda = False
 
 def inference(checkpoint_file, text):
-    ds = tiny_words(
-        max_text_length=hp.max_text_length,
-        max_audio_length=hp.max_audio_length,
-        max_dataset_size=args.data_size
-    )
+    lang = make_lang(TINY_WORDS)
 
-    print(ds.texts)
+    print('Num characters', lang.num_chars)
 
     # prepare input
-    indexes = indexes_from_text(ds.lang, text)
+    indexes = indexes_from_text(lang, text)
     indexes.append(EOT_token)
     padded_indexes = pad_indexes(indexes, hp.max_text_length, PAD_token)
     texts_v = Variable(torch.from_numpy(padded_indexes))
@@ -44,7 +39,7 @@ def inference(checkpoint_file, text):
         texts_v = texts_v.cuda()
 
     encoder = Encoder(
-        ds.lang.num_chars, hp.embedding_dim, hp.encoder_bank_k,
+        lang.num_chars, hp.embedding_dim, hp.encoder_bank_k,
         hp.encoder_bank_ck, hp.encoder_proj_dims,
         hp.encoder_highway_layers, hp.encoder_highway_units,
         hp.encoder_gru_units, dropout=hp.dropout, use_cuda=hp.use_cuda
