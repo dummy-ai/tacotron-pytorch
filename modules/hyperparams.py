@@ -41,7 +41,7 @@ class Hyperparams:
     # training scheme
     lr = 0.0001
     batch_size = 32
-    n_epochs = 50000
+    n_epochs = 150000
     dropout = 0.5
     use_cuda = True
     teacher_forcing_ratio = 1.0
