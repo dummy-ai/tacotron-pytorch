@@ -172,8 +172,7 @@ def tiny_words(max_text_length=20, max_audio_length=60,
 
     return DataSet(texts, audios,
                    max_text_length=max_text_length,
-                   max_audio_length=max_audio_length,
-                   preprocess=preprocess)
+                   max_audio_length=max_audio_length)
 
 
 def make_lang(data_path, max_dataset_size=sys.maxsize):

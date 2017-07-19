@@ -4,8 +4,10 @@ import random
 import sys
 import traceback
 import numpy as np
+import os
 import torch
 import argparse
+import uuid
 import torch.nn as nn
 from torch import optim
 from torch.autograd import Variable
@@ -19,10 +21,18 @@ from utils import Timed
 
 parser = argparse.ArgumentParser(
     description="Train an Tacotron model for speech synthesis")
+parser.add_argument("--load_from", type=str, default=None)
+parser.add_argument("--checkpoints", type=str, default="/mnt/nfs/result/tacotron/ds-1800")
 parser.add_argument("--max-epochs", type=int, default=100000)
 parser.add_argument('--multi-gpus', dest='multi_gpus', action='store_true')
 parser.set_defaults(multi_gpus=False)
 parser.add_argument('-d', '--data-size', default=sys.maxsize, type=int)
+
+args = parser.parse_args()
+checkpoint_dir = args.checkpoints + '-{}'.format(str(uuid.uuid4())[:10])
+
+if not os.path.exists(checkpoint_dir):
+    os.makedirs(checkpoint_dir)
 
 
 def train_batch(mels_v, mags_v, texts_v,
@@ -122,7 +132,7 @@ def time_since(since, percent):
     return '%s (- %s)' % (as_minutes(s), as_minutes(rs))
 
 
-def train(args):
+def train():
     # initalize dataset
     with Timed('Loading dataset'):
         ds = tiny_words(
@@ -164,6 +174,13 @@ def train(args):
             encoder.cuda()
             decoder.cuda()
             postnet.cuda()
+
+        # load models
+        if args.load_from:
+            checkpoint = torch.load(args.load_from)
+            encoder.load_state_dict(checkpoint['encoder'])
+            decoder.load_state_dict(checkpoint['decoder'])
+            postnet.load_state_dict(checkpoint['postnet'])
 
         # initialize optimizers and criterion
         all_paramters = (list(encoder.parameters()) +
@@ -221,18 +238,18 @@ def train(args):
                 'decoder': decoder.state_dict(),
                 'postnet': postnet.state_dict(),
                 'optimizer': optimizer.state_dict(),
-            })
+                'lang': ds.lang
+            }, epoch)
 
 
-def save_checkpoint(state, filename="tacotron.checkpoint"):
-    torch.save(state, filename)
+def save_checkpoint(state, epoch):
+    checkpoint_file = os.path.join(checkpoint_dir, str(epoch))
+    torch.save(state, checkpoint_file)
 
 
 def main():
-    args = parser.parse_args()
-
     try:
-        return train(args)
+        return train()
     except Exception as e:
         traceback.print_exc()
         print('[Error]', str(e))
